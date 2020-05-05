@@ -1,18 +1,10 @@
-from exporter.Providers import DataProvider
+from exporter.Providers import ApiDataProvider
 
-class BucharestApiDataProvider(DataProvider):
-    pass
+class BucharestApiDataProvider(ApiDataProvider):
+    def __init__(self, feed_id="", lenient=False, disable_normalization=False, **kwargs):
+        super().__init__()
 
-class IasiApiDataProvider(DataProvider):
-    pass
+class IasiApiDataProvider(ApiDataProvider):
+    def __init__(self, feed_id="", lenient=False, disable_normalization=False, **kwargs):
+        super().__init__()
 
-
-class ApiProviderBuilder:
-    def __init__(self, provider: str):
-        self.provider = provider
-
-    def build(self) -> DataProvider:
-        if self.provider == "bucharest":
-            return BucharestApiDataProvider()
-        else:
-            return IasiApiDataProvider()

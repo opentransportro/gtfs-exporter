@@ -2,4 +2,4 @@ venv
 .idea
 db.sqlite
 feed.zip
-*/__pycache__/*
+**/__pycache__/*

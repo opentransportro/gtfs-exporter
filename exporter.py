@@ -46,7 +46,7 @@ from gtfslib.dao import Dao
 from gtfslib.model import Route
 from sqlalchemy import update
 from exporter.Providers import DataProvider, FileDataProvider, HttpDataProvider
-from exporter.api.ApiProviders import ApiProviderBuilder
+from exporter.api.Builder import ApiProviderBuilder
 import exporter
 
 
@@ -58,14 +58,15 @@ class Exporter:
         if arguments['--id'] is None:
             arguments['--id'] = ""
 
-        self.logger = logging.getLogger('gtfs-exporter')
-        self.logger.setLevel(logging.DEBUG)
-        self.logger.addHandler(StreamHandler(sys.stdout))
+        logger = logging.getLogger('gtfs-exporter')
+        logger.setLevel(logging.DEBUG)
+        logger.addHandler(StreamHandler(sys.stdout))
 
-        if os.path.exists(arguments["<database>"]):
-            os.remove(arguments["<database>"])
+        database = arguments['<database>']
+        if os.path.exists(database):
+            os.remove(database)
 
-        self.dao = Dao(arguments['<database>'], sql_logging=arguments['--logsql'], schema=arguments['--schema'])
+        self.dao = Dao(database, sql_logging=arguments['--logsql'], schema=arguments['--schema'])
 
         if arguments['--list']:
             for feed in self.dao.feeds():
@@ -106,9 +107,15 @@ def main():
                                     lenient=arguments['--lenient'],
                                     disable_normalization=arguments['--disablenormalize'])
     elif privider_type == "url":
-        provider = HttpDataProvider(arguments['--url'])
+        provider = HttpDataProvider(arguments['--url'],
+                                    feed_id=arguments['--id'],
+                                    lenient=arguments['--lenient'],
+                                    disable_normalization=arguments['--disablenormalize'])
     elif privider_type == "api":
-        builder = ApiProviderBuilder(arguments['--url'])
+        builder = ApiProviderBuilder(arguments['--url'],
+                                    feed_id=arguments['--id'],
+                                    lenient=arguments['--lenient'],
+                                    disable_normalization=arguments['--disablenormalize'])
         provider = builder.build()
 
     instance = Exporter(arguments, provider)

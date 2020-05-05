@@ -1,9 +1,8 @@
 import requests
-import json
 import os
+import logging
 from gtfslib.dao import Dao, transactional
 from gtfslib.csvgtfs import Gtfs, ZipFileSource
-from exporter import Processor
 
 
 class DataProvider:
@@ -36,6 +35,7 @@ class FileDataProvider(DataProvider):
 
 class HttpDataProvider(FileDataProvider):
     def __init__(self, url: str, feed_id="", lenient=False, disable_normalization=False, **kwargs):
+        # logging.info("importing data from url {} for feed id {}".format(url, feed_id))
         response = requests.get(url)
         # remove existing file
         if os.path.exists("feed.zip"):
@@ -48,4 +48,4 @@ class HttpDataProvider(FileDataProvider):
 
 
 class ApiDataProvider(DataProvider):
-    ""
+    pass
