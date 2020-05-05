@@ -39,16 +39,15 @@ Authors:
 import os
 
 from docopt import docopt
-from logging import StreamHandler
+from logging import StreamHandler, FileHandler
 import logging
 import sys
 from gtfslib.dao import Dao
 from gtfslib.model import Route
-from sqlalchemy import update
 from exporter.Providers import DataProvider, FileDataProvider, HttpDataProvider
 from exporter.api.Builder import ApiProviderBuilder
 import exporter
-
+from exporter.GtfsWritter import GtfsWritter, WritterContext
 
 class Exporter:
     def __init__(self, arguments, provider: DataProvider):
@@ -58,9 +57,9 @@ class Exporter:
         if arguments['--id'] is None:
             arguments['--id'] = ""
 
-        logger = logging.getLogger('gtfs-exporter')
-        logger.setLevel(logging.DEBUG)
-        logger.addHandler(StreamHandler(sys.stdout))
+        logging.basicConfig(format='%(asctime)-15s %(clientip)s %(user)-8s %(message)s')
+        logger = logging.getLogger('grfsexporter')
+        logger.addHandler(StreamHandler(sys.stderr))
 
         database = arguments['<database>']
         if os.path.exists(database):
@@ -76,23 +75,42 @@ class Exporter:
             feed_id = arguments['--id']
             existing_feed = self.dao.feed(feed_id)
             if existing_feed:
-                self.logger.warning("Deleting existing feed ID '%s'" % feed_id)
+                logger.warning("Deleting existing feed ID '%s'" % feed_id)
                 self.dao.delete_feed(feed_id)
                 self.dao.commit()
 
     def export(self):
         logging.info("Importing data from provided source")
         self.provider.load_data_source(self.dao)
-        update(Route).where(Route.route_type == Route.TYPE_BUS).values(route_color='user #5')
 
-        for route in self.dao.routes(fltr=Route.route_type == Route.TYPE_BUS):
-            print("%s: %d trips" % (route.route_long_name, len(route.trips)))
-            route.route_color = "abcabc"
+        for route in self.dao.routes():
+            print("updating route [%s] setting correct color" % (route.route_long_name))
+
+            route.route_text_color = "FFFFFF"
+
+            if route.route_type == Route.TYPE_BUS:
+                route.route_color = "195BAD"
+            elif route.route_type == Route.TYPE_TRAM:
+                route.route_color = "FFAD33"
+            elif route.route_type == Route.TYPE_RAIL:
+                route.route_color = "FF5B33"
+            elif route.route_type == Route.TYPE_CABLECAR:
+                route.route_color = "FF8433"
+            elif route.route_type == Route.TYPE_SUBWAY:
+                route.route_color = "D13333"
+            elif route.route_type == Route.TYPE_FERRY:
+                route.route_color = "62A9DD"
+
         self.dao.session().commit()
 
         logging.info("Processing data from provided source")
 
         # self.processor.process(ruleset)
+        class Args:
+            filter = None
+
+        writter = GtfsWritter(WritterContext(self.dao, Args()), bundle="feed-new.zip")
+        writter.run()
 
 
 def main():

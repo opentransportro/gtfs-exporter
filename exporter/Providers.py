@@ -35,16 +35,19 @@ class FileDataProvider(DataProvider):
 
 class HttpDataProvider(FileDataProvider):
     def __init__(self, url: str, feed_id="", lenient=False, disable_normalization=False, **kwargs):
-        # logging.info("importing data from url {} for feed id {}".format(url, feed_id))
-        response = requests.get(url)
-        # remove existing file
-        if os.path.exists("feed.zip"):
-            os.remove("feed.zip")
-        # save the new one
-        with open('feed.zip', 'wb') as r:
-            r.write(response.content)
-
         super().__init__("feed.zip", feed_id, lenient, disable_normalization, **kwargs)
+        self.url = url
+
+    def load_data_source(self, dao: Dao) -> bool:
+        # logging.info("importing data from url {} for feed id {}".format(url, feed_id))
+        response = requests.get(self.url)
+        # remove existing file
+        if os.path.exists(self.path):
+            os.remove(self.path)
+        # save the new one
+        with open(self.path, 'wb') as r:
+            r.write(response.content)
+        return super().load_data_source(dao)
 
 
 class ApiDataProvider(DataProvider):
