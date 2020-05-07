@@ -1,5 +1,8 @@
 venv
 .idea
-db.sqlite
-feed.zip
+tmp
+*.sqlite
+*.zip
+*.bz2
+*.log
 **/__pycache__/*
