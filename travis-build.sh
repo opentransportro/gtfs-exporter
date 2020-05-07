@@ -35,9 +35,11 @@ function imagedeploy {
       elif [ "$TRAVIS_BRANCH" = "dev" ]; then
         echo "processing dev build $TRAVIS_COMMIT"
         #master branch, build and tag as latest
-        docker build --tag="$ORG/$1:dev-$DOCKER_TAG" .
-        docker push $ORG/$1:dev-$DOCKER_TAG
-        tagandpush $1 "dev" ""
+        docker build --tag="$ORG/$1:dev-${TRAVIS_COMMIT}" .
+        docker push $ORG/$1:dev-$TRAVIS_COMMIT
+
+        docker tag $ORG/$1:dev-$TRAVIS_COMMIT $ORG/$1:dev
+        docker push $ORG/$1:dev
       else
         #check if branch is greenkeeper branch
         echo Not Pushing greenkeeper to docker hub
