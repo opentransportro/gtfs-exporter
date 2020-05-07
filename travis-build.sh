@@ -32,12 +32,12 @@ function imagedeploy {
         docker build --tag="$ORG/$1:$DOCKER_TAG" .
         docker push $ORG/$1:$DOCKER_TAG
         tagandpush $1 "latest" ""
-      elif [ "$TRAVIS_BRANCH" = "next" ]; then
-        echo "processing master build $TRAVIS_COMMIT"
+      elif [ "$TRAVIS_BRANCH" = "dev" ]; then
+        echo "processing dev build $TRAVIS_COMMIT"
         #master branch, build and tag as latest
-        docker build --tag="$ORG/$1:next-$DOCKER_TAG" .
-        docker push $ORG/$1:next-$DOCKER_TAG
-        tagandpush $1 "next" "next-"
+        docker build --tag="$ORG/$1:dev-$DOCKER_TAG" .
+        docker push $ORG/$1:dev-$DOCKER_TAG
+        tagandpush $1 "dev" "dev-$DOCKER_TAG"
       else
         #check if branch is greenkeeper branch
         echo Not Pushing greenkeeper to docker hub
@@ -50,6 +50,6 @@ function imagedeploy {
   fi
 }
 
-cd ${PWD} && imagedeploy "pfaedle"
+cd ${PWD} && imagedeploy "gtfs-exporter"
 
 echo Build completed
