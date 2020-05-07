@@ -46,11 +46,10 @@ import sys
 import shutil
 from gtfslib.dao import Dao
 from gtfslib.model import Route
-import exporter
 from exporter.api.Builder import ApiProviderBuilder
 from exporter.GtfsWritter import GtfsWritter, WritterContext
 from exporter.Providers import DataProvider, FileDataProvider, HttpDataProvider
-
+from exporter import __version__ as version, __temp_path__ as tmp_path, __output_path__ as out_path
 
 class Exporter:
     def __init__(self, arguments, provider: DataProvider):
@@ -61,9 +60,9 @@ class Exporter:
             arguments['--id'] = ""
 
         logging.basicConfig(format='%(asctime)-15s %(clientip)s %(user)-8s %(message)s')
-        logger = logging.getLogger('grfsexporter')
-        logger.addHandler(StreamHandler(sys.stderr))
-        logger.addHandler(FileHandler("export.log"))
+        self.logger = logging.getLogger('grfsexporter')
+        self.logger.addHandler(StreamHandler(sys.stderr))
+        self.logger.addHandler(FileHandler("export.log"))
 
         database = arguments['<database>']
         if os.path.exists(database):
@@ -84,17 +83,19 @@ class Exporter:
                 self.dao.commit()
 
     def generate_shapes(self):
-        from exporter import __app_path__ as app_path, __temp_path__ as tmp_path, __output_path__ as out_path
+        self.logger.info("searching for pfaedle support for generating shapes")
         if which('pfaedle') is None:
+            self.logger.error("no support for generating shapes, pfaedle not found. Please clone from "
+                              "https://github.com/opentransportro/pfaedle")
             pass
             # need to clone and build repo since this tool is needed for generating shapes
 
         # download maps
+        self.logger.info("downloading maps required")
         if not os.path.exists(tmp_path + "map.osm"):
             filename = "map.osm.bz2"
             if not os.path.exists("map.osm.bz2"):
-                subprocess.check_call(
-                    ["wget", "-O" + filename, "https://download.geofabrik.de/europe/romania-latest.osm.bz2"])
+                self.logger.info("downloading from https://download.geofabrik.de/europe/romania-latest.osm.bz2")
                 import requests
                 file = requests.get("https://download.geofabrik.de/europe/romania-latest.osm.bz2", stream=True)
 
@@ -106,10 +107,18 @@ class Exporter:
                         if ch:
                             exported_file.write(ch)
 
+            self.logger.info("expanding map file")
+
             import bz2
             with open(tmp_path + "map.osm", 'wb') as output:
                 with bz2.BZ2File(filename, 'rb') as input:
                     shutil.copyfileobj(input, output)
+
+        # removing not valid shape references
+        import pandas as pd
+        pd.read_csv(tmp_path + "trips.txt").set_index('shape_id').to_csv(tmp_path + "trips.txt", index=None)
+
+        self.logger.info("generating shapes")
         subprocess.check_call(
             ['pfaedle', '-D', '--inplace', '-ddebug-out', '-o' + out_path, '--write-trgraph', '-mall',
              '-x' + tmp_path + 'map.osm', tmp_path])
@@ -168,10 +177,10 @@ def which(program):
 
 
 def main():
-    # if os.path.exists(exporter.__temp_path__):
-    #     shutil.rmtree(exporter.__temp_path__)
+    if os.path.exists(tmp_path):
+        shutil.rmtree(tmp_path)
 
-    arguments = docopt(__doc__, version='gtfs-exporter %s' % exporter.__version__)
+    arguments = docopt(__doc__, version='gtfs-exporter %s' % version)
 
     # db.sqlite --provider=file --file=sncf.zip --id=sncf
     privider_type = arguments['--provider']
@@ -195,7 +204,7 @@ def main():
 
     instance = Exporter(arguments, provider)
     instance.generate_shapes()
-    # instance.process_gtfs()
+    instance.process_gtfs()
 
 
 if __name__ == '__main__':

@@ -29,7 +29,7 @@ setup(
     ],
     keywords='GTFS transit exporter',
     packages=find_packages(),
-    install_requires=['gtfslib', 'clint'],
+    install_requires=['gtfslib', 'clint', 'pandas'],
     extras_require={
         'dev': ['check-manifest'],
         'test': ['coverage'],
