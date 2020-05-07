@@ -42,6 +42,7 @@ import subprocess
 from docopt import docopt
 from logging import StreamHandler, FileHandler
 import logging
+import logging.handlers
 import sys
 import shutil
 from gtfslib.dao import Dao
@@ -51,18 +52,15 @@ from exporter.GtfsWritter import GtfsWritter, WritterContext
 from exporter.Providers import DataProvider, FileDataProvider, HttpDataProvider
 from exporter import __version__ as version, __temp_path__ as tmp_path, __output_path__ as out_path
 
+
 class Exporter:
     def __init__(self, arguments, provider: DataProvider):
         self.provider = provider
         self.arguments = arguments
+        self.logger = logging.getLogger('grfsexporter')
 
         if arguments['--id'] is None:
             arguments['--id'] = ""
-
-        logging.basicConfig(format='%(asctime)-15s %(clientip)s %(user)-8s %(message)s')
-        self.logger = logging.getLogger('grfsexporter')
-        self.logger.addHandler(StreamHandler(sys.stderr))
-        self.logger.addHandler(FileHandler("export.log"))
 
         database = arguments['<database>']
         if os.path.exists(database):
@@ -78,7 +76,7 @@ class Exporter:
             feed_id = arguments['--id']
             existing_feed = self.dao.feed(feed_id)
             if existing_feed:
-                logger.warning("Deleting existing feed ID '%s'" % feed_id)
+                self.logger.warning("Deleting existing feed ID '%s'" % feed_id)
                 self.dao.delete_feed(feed_id)
                 self.dao.commit()
 
@@ -114,17 +112,17 @@ class Exporter:
                 with bz2.BZ2File(filename, 'rb') as input:
                     shutil.copyfileobj(input, output)
 
+        import exporter
         # removing not valid shape references
-        import pandas as pd
-        pd.read_csv(tmp_path + "trips.txt").set_index('shape_id').to_csv(tmp_path + "trips.txt", index=None)
+        exporter.remove_column(tmp_path + "trips.txt", "shape_id")
 
         self.logger.info("generating shapes")
-        subprocess.check_call(
+        exporter.run_command(
             ['pfaedle', '-D', '--inplace', '-ddebug-out', '-o' + out_path, '--write-trgraph', '-mall',
-             '-x' + tmp_path + 'map.osm', tmp_path])
+             '-x' + tmp_path + 'map.osm', tmp_path], self.logger)
 
     def process_gtfs(self):
-        logging.info("Importing data from provided source")
+        self.logger.info("Importing data from provided source")
         self.provider.load_data_source(self.dao)
 
         for route in self.dao.routes():
@@ -147,12 +145,14 @@ class Exporter:
 
         self.dao.session().commit()
 
-        logging.info("Processing data from provided source")
+        self.logger.info("Processing data from provided source")
 
+        # Here we should use a rule processor to have more flexibility when processing data
         # self.processor.process(ruleset)
         class Args:
             filter = None
 
+        self.logger.info("Generating archive with name feed-new.zip")
         writer = GtfsWritter(WritterContext(self.dao, Args()), bundle="feed-new.zip")
         writer.run()
 
@@ -177,6 +177,12 @@ def which(program):
 
 
 def main():
+    logger = logging.getLogger('grfsexporter')
+    logger.setLevel(logging.INFO)
+    fh = logging.handlers.RotatingFileHandler('export.log', maxBytes=10240, backupCount=5)
+    fh.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    logger.addHandler(fh)
+
     if os.path.exists(tmp_path):
         shutil.rmtree(tmp_path)
 
