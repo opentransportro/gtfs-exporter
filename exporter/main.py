@@ -38,6 +38,7 @@ Authors:
 """
 import os
 import subprocess
+import sys
 
 from docopt import docopt
 import logging
@@ -80,7 +81,7 @@ class Exporter:
 
     def generate_shapes(self):
         self.logger.info("searching for pfaedle support for generating shapes")
-        if which('pfaedle') is None:
+        if shutil.which('pfaedle') is None:
             self.logger.error("no support for generating shapes, pfaedle not found. Please clone from "
                               "https://github.com/opentransportro/pfaedle")
             return
@@ -89,13 +90,13 @@ class Exporter:
         # download maps
         self.logger.info("downloading maps required")
         if not os.path.exists(tmp_path + "map.osm"):
-            filename = "map.osm.bz2"
-            if not os.path.exists("map.osm.bz2"):
+            filename = "../map.osm.bz2"
+            if not os.path.exists("../map.osm.bz2"):
                 self.logger.info("downloading from https://download.geofabrik.de/europe/romania-latest.osm.bz2")
                 import requests
                 file = requests.get("https://download.geofabrik.de/europe/romania-latest.osm.bz2", stream=True)
 
-                with open("map.osm.bz2", "wb") as exported_file:
+                with open("../map.osm.bz2", "wb") as exported_file:
                     total_length = int(file.headers.get('content-length'))
                     from clint.textui import progress
                     for ch in progress.bar(file.iter_content(chunk_size=2391975),
@@ -155,34 +156,17 @@ class Exporter:
         writer.run()
 
 
-def which(program):
-    import os
-
-    def is_exe(fpath):
-        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
-
-    fpath, fname = os.path.split(program)
-    if fpath:
-        if is_exe(program):
-            return program
-    else:
-        for path in os.environ["PATH"].split(os.pathsep):
-            exe_file = os.path.join(path, program)
-            if is_exe(exe_file):
-                return exe_file
-
-    return None
-
-
 def main():
     logger = logging.getLogger('grfsexporter')
     logger.setLevel(logging.INFO)
-    fh = logging.handlers.RotatingFileHandler('export.log', maxBytes=10240, backupCount=5)
+    fh = logging.handlers.RotatingFileHandler('../export.log', mode="w", maxBytes=10240, backupCount=5)
     fh.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
     logger.addHandler(fh)
+    sh = logging.StreamHandler(sys.stdout)
+    logger.addHandler(sh)
 
-    if os.path.exists(tmp_path):
-        shutil.rmtree(tmp_path)
+    # if os.path.exists(tmp_path):
+    #     shutil.rmtree(tmp_path)
 
     arguments = docopt(__doc__, version='gtfs-exporter %s' % version)
 

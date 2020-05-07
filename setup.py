@@ -9,11 +9,11 @@ import exporter
 setup(
     name='gtfs-exporter',
     version=exporter.__version__,
-    # description="GTFS database library",
-    # long_description="An open source library for reading, databasing, querying and manipulating GTFS-based transit data",
-    # url='https://github.com/afimb/gtfslib-python',
-    # author='AFIMB / CEREMA / MECATRAN',
-    # author_email='laurent.gregoire@mecatran.com',
+    description="GTFS processing app",
+    long_description="An open source library for reading, databasing, querying and manipulating GTFS-based transit data",
+    url='https://github.com/opentransportro/gtfs-exporter',
+    author='VLAD VESA',
+    author_email='vlad@opentransport.ro',
     license='GPLv3',
 
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
@@ -35,9 +35,8 @@ setup(
         'test': ['coverage'],
     },
     entry_points={
-        # 'console_scripts': [
-        #     'gtfsdbloader=gtfslib.gtfsdbloader:main',
-        #     'gtfsrun=gtfsplugins.gtfsrun:main'
-        # ],
+        'console_scripts': [
+            'gtfsprocess=exporter.main:main',
+        ],
     },
 )

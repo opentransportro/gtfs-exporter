@@ -11,7 +11,7 @@ import threading
 
 
 class LogPipe(threading.Thread):
-    def __init__(self, level, logger = None):
+    def __init__(self, level, logger=None):
         """Setup the object with a logger and a loglevel
         and start the thread
         """
@@ -43,11 +43,6 @@ class LogPipe(threading.Thread):
         """Close the write end of the pipe.
         """
         os.close(self.fdWrite)
-
-
-def log_subprocess_output(pipe):
-    for line in iter(pipe.readline, b''):  # b'\n'-separated lines
-        logging.info('got line from subprocess: %r', line)
 
 
 def run_command(args: [], logger=None) -> bool:

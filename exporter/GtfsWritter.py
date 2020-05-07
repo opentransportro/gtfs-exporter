@@ -21,10 +21,12 @@ from gtfslib.model import Stop, Transfer, FareAttribute, FareRule
 import os
 import zipfile
 import six
+import logging
 
 from gtfslib.utils import fmttime, group_pairs
 from gtfsplugins.prettycsv import PrettyCsv
 
+logger = logging.getLogger("gtfsexporter")
 class WritterContext(object):
     """The class given as execution context to a plugin.
     Propose helper methods to filter objects, or get the DAO."""
@@ -61,7 +63,7 @@ class GtfsWritter(object):
             for agency in self.context.dao().agencies(fltr=self.context.args.filter):
                 nagencies += 1
                 csvout.writerow([ agency.agency_id, agency.agency_name, agency.agency_url, agency.agency_timezone, agency.agency_lang, agency.agency_phone, agency.agency_fare_url, agency.agency_email ])
-            print("Exported %d agencies" % (nagencies))
+            logger.info("Exported %d agencies" % (nagencies))
 
         stop_ids = set()
         zone_ids = set()
@@ -87,7 +89,7 @@ class GtfsWritter(object):
                     if station.zone_id is not None:
                         zone_ids.add((station.feed_id, station.zone_id))
                     nstops += 1
-            print("Exported %d stops" % (nstops))
+            logger.info("Exported %d stops" % (nstops))
             stop_ids |= station_ids
 
         route_ids = set()
@@ -97,7 +99,7 @@ class GtfsWritter(object):
                 nroutes += 1
                 csvout.writerow([ route.route_id, route.agency_id, route.route_short_name, route.route_long_name, route.route_desc, route.route_type, route.route_url, route.route_color, route.route_text_color ])
                 route_ids.add((route.feed_id, route.route_id))
-            print("Exported %d routes" % (nroutes))
+            logger.info("Exported %d routes" % (nroutes))
 
         stop_times_columns = ["trip_id", "arrival_time", "departure_time", "stop_id", "stop_sequence", "stop_headsign", "pickup_type", "drop_off_type", "timepoint"]
         if not self.skip_shape_dist:
@@ -109,7 +111,7 @@ class GtfsWritter(object):
                 for trip in self.context.dao().trips(fltr=self.context.args.filter, prefetch_stops=False, prefetch_stop_times=True, prefetch_calendars=False, prefetch_routes=False):
                     ntrips += 1
                     if ntrips % 1000 == 0:
-                        print("%d trips..." % (ntrips))
+                        logger.info("%d trips..." % (ntrips))
                     csvout1.writerow([ trip.route_id, trip.service_id, trip.trip_id, trip.trip_headsign, trip.trip_short_name, trip.direction_id, trip.block_id, trip.shape_id, trip.wheelchair_accessible, trip.bikes_allowed])
                     for stoptime in trip.stop_times:
                         nstoptimes += 1
@@ -125,7 +127,7 @@ class GtfsWritter(object):
                         if not self.skip_shape_dist:
                             row.append(stoptime.shape_dist_traveled)
                         csvout2.writerow(row)
-                print("Exported %d trips with %d stop times" % (ntrips, nstoptimes))
+                logger.info("Exported %d trips with %d stop times" % (ntrips, nstoptimes))
 
         # Note: GTFS' model does not have calendars objects to export,
         # since a calendar is renormalized/expanded to a list of dates.
@@ -135,11 +137,11 @@ class GtfsWritter(object):
             for calendar in self.context.dao().calendars(fltr=self.context.args.filter, prefetch_dates=True):
                 ncals += 1
                 if ncals % 1000 == 0:
-                    print("%d calendars, %d dates..." % (ncals, ndates))
+                    logger.info("%d calendars, %d dates..." % (ncals, ndates))
                 for date in calendar.dates:
                     ndates += 1
                     csvout.writerow([calendar.service_id, date.toYYYYMMDD(), 1])
-            print("Exported %d calendars with %d dates" % (ncals, ndates))
+            logger.info("Exported %d calendars with %d dates" % (ncals, ndates))
 
         fare_attr_ids = set()
         nfarerules = [0]
@@ -174,7 +176,7 @@ class GtfsWritter(object):
                 for farerule in self.context.dao().fare_rules(fltr=(FareRule.feed_id==feed_id) & (FareRule.route_id==None) & (FareRule.origin_id==None) & (FareRule.contains_id==None) & (FareRule.destination_id==None), prefetch_fare_attributes=False):
                     if not _output_farerule(farerule):
                         continue
-            print("Exported %d fare rules" % (nfarerules[0]))
+            logger.info("Exported %d fare rules" % (nfarerules[0]))
         if nfarerules[0] == 0:
             os.remove("fare_rules.txt")
 
@@ -184,7 +186,7 @@ class GtfsWritter(object):
                 for fareattr in self.context.dao().fare_attributes(fltr=(FareAttribute.feed_id==feed_id) & FareAttribute.fare_id.in_(fa_ids), prefetch_fare_rules=False):
                     nfareattrs += 1
                     csvout.writerow([ fareattr.fare_id, fareattr.price, fareattr.currency_type, fareattr.payment_method, fareattr.transfers, fareattr.transfer_duration ])
-            print("Exported %d fare attributes" % (nfareattrs))
+            logger.info("Exported %d fare attributes" % (nfareattrs))
         if nfareattrs == 0:
             os.remove("fare_attributes.txt")
 
@@ -196,14 +198,14 @@ class GtfsWritter(object):
             for shape in self.context.dao().shapes(fltr=self.context.args.filter, prefetch_points=True):
                 nshapes += 1
                 if nshapes % 100 == 0:
-                    print("%d shapes, %d points..." % (nshapes, nshapepoints))
+                    logger.info("%d shapes, %d points..." % (nshapes, nshapepoints))
                 for point in shape.points:
                     nshapepoints += 1
                     row = [shape.shape_id, point.shape_pt_lat, point.shape_pt_lon, point.shape_pt_sequence]
                     if not self.skip_shape_dist:
                         row.append(point.shape_dist_traveled)
                     csvout.writerow(row)
-            print("Exported %d shapes with %d points" % (nshapes, nshapepoints))
+            logger.info("Exported %d shapes with %d points" % (nshapes, nshapepoints))
         if nshapes == 0:
             os.remove("shapes.txt")
 
@@ -227,7 +229,7 @@ class GtfsWritter(object):
                     transfer_ids.add(transfer_id)
                     ntransfers += 1
                     csvout.writerow([ transfer.from_stop_id, transfer.to_stop_id, transfer.transfer_type, transfer.min_transfer_time ])
-            print("Exported %d transfers" % (ntransfers))
+            logger.info("Exported %d transfers" % (ntransfers))
         if ntransfers == 0:
             os.remove("transfers.txt")
 
@@ -237,7 +239,7 @@ class GtfsWritter(object):
                 self.bundle = "gtfs.zip"
             if not self.bundle.endswith('.zip'):
                 self.bundle = self.bundle + '.zip'
-            print("Zipping result to %s (removing .txt files)" % (self.bundle))
+            logger.info("Zipping result to %s (removing .txt files)" % (self.bundle))
             with zipfile.ZipFile(self.bundle, 'w', zipfile.ZIP_DEFLATED) as zipf:
                 for f in [ "agency.txt", "stops.txt", "routes.txt", "trips.txt", "stop_times.txt", "calendar_dates.txt", "fare_rules.txt", "fare_attributes.txt", "shapes.txt", "transfers.txt" ]:
                     if os.path.isfile(f):
