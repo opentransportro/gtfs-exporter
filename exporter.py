@@ -37,17 +37,20 @@ Examples:
 Authors:
 """
 import os
+import subprocess
 
 from docopt import docopt
 from logging import StreamHandler, FileHandler
 import logging
 import sys
+import shutil
 from gtfslib.dao import Dao
 from gtfslib.model import Route
-from exporter.Providers import DataProvider, FileDataProvider, HttpDataProvider
-from exporter.api.Builder import ApiProviderBuilder
 import exporter
+from exporter.api.Builder import ApiProviderBuilder
 from exporter.GtfsWritter import GtfsWritter, WritterContext
+from exporter.Providers import DataProvider, FileDataProvider, HttpDataProvider
+
 
 class Exporter:
     def __init__(self, arguments, provider: DataProvider):
@@ -60,6 +63,7 @@ class Exporter:
         logging.basicConfig(format='%(asctime)-15s %(clientip)s %(user)-8s %(message)s')
         logger = logging.getLogger('grfsexporter')
         logger.addHandler(StreamHandler(sys.stderr))
+        logger.addHandler(FileHandler("export.log"))
 
         database = arguments['<database>']
         if os.path.exists(database):
@@ -79,7 +83,38 @@ class Exporter:
                 self.dao.delete_feed(feed_id)
                 self.dao.commit()
 
-    def export(self):
+    def generate_shapes(self):
+        from exporter import __app_path__ as app_path, __temp_path__ as tmp_path, __output_path__ as out_path
+        if which('pfaedle') is None:
+            pass
+            # need to clone and build repo since this tool is needed for generating shapes
+
+        # download maps
+        if not os.path.exists(tmp_path + "map.osm"):
+            filename = "map.osm.bz2"
+            if not os.path.exists("map.osm.bz2"):
+                subprocess.check_call(
+                    ["wget", "-O" + filename, "https://download.geofabrik.de/europe/romania-latest.osm.bz2"])
+                import requests
+                file = requests.get("https://download.geofabrik.de/europe/romania-latest.osm.bz2", stream=True)
+
+                with open("map.osm.bz2", "wb") as exported_file:
+                    total_length = int(file.headers.get('content-length'))
+                    from clint.textui import progress
+                    for ch in progress.bar(file.iter_content(chunk_size=2391975),
+                                           expected_size=(total_length / 1024) + 1):
+                        if ch:
+                            exported_file.write(ch)
+
+            import bz2
+            with open(tmp_path + "map.osm", 'wb') as output:
+                with bz2.BZ2File(filename, 'rb') as input:
+                    shutil.copyfileobj(input, output)
+        subprocess.check_call(
+            ['pfaedle', '-D', '--inplace', '-ddebug-out', '-o' + out_path, '--write-trgraph', '-mall',
+             '-x' + tmp_path + 'map.osm', tmp_path])
+
+    def process_gtfs(self):
         logging.info("Importing data from provided source")
         self.provider.load_data_source(self.dao)
 
@@ -109,11 +144,33 @@ class Exporter:
         class Args:
             filter = None
 
-        writter = GtfsWritter(WritterContext(self.dao, Args()), bundle="feed-new.zip")
-        writter.run()
+        writer = GtfsWritter(WritterContext(self.dao, Args()), bundle="feed-new.zip")
+        writer.run()
+
+
+def which(program):
+    import os
+
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None
 
 
 def main():
+    # if os.path.exists(exporter.__temp_path__):
+    #     shutil.rmtree(exporter.__temp_path__)
+
     arguments = docopt(__doc__, version='gtfs-exporter %s' % exporter.__version__)
 
     # db.sqlite --provider=file --file=sncf.zip --id=sncf
@@ -131,13 +188,14 @@ def main():
                                     disable_normalization=arguments['--disablenormalize'])
     elif privider_type == "api":
         builder = ApiProviderBuilder(arguments['--url'],
-                                    feed_id=arguments['--id'],
-                                    lenient=arguments['--lenient'],
-                                    disable_normalization=arguments['--disablenormalize'])
+                                     feed_id=arguments['--id'],
+                                     lenient=arguments['--lenient'],
+                                     disable_normalization=arguments['--disablenormalize'])
         provider = builder.build()
 
     instance = Exporter(arguments, provider)
-    instance.export()
+    instance.generate_shapes()
+    # instance.process_gtfs()
 
 
 if __name__ == '__main__':

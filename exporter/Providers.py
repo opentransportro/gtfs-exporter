@@ -1,13 +1,34 @@
+from zipfile import ZipFile
+
 import requests
 import os
+import exporter
 import logging
 from gtfslib.dao import Dao, transactional
-from gtfslib.csvgtfs import Gtfs, ZipFileSource
+from gtfslib.csvgtfs import Gtfs
+
+
+class FolderSource(object):
+    def __init__(self, inputfile):
+        if not os.path.exists(exporter.__temp_path__) and os.path.exists(inputfile):
+            with ZipFile(inputfile, "r") as zip_ref:
+                zip_ref.extractall(exporter.__temp_path__)
+
+    def open(self, filename, mode='rU'):
+        if os.path.exists(exporter.__temp_path__ + filename):
+            return open(exporter.__temp_path__ + filename, mode + "b")
+
+        raise KeyError(filename)
+
+    def close(self):
+        pass
 
 
 class DataProvider:
-    def __init__(self):
-        pass
+    def __init__(self, feed_id="", lenient=False, disable_normalization=False, **kwargs):
+        self.feed_id = feed_id
+        self.lenient = lenient
+        self.disable_normalization = disable_normalization
 
     def load_data_source(self, dao: Dao) -> bool:
         """Load in the file for extracting text."""
@@ -16,38 +37,48 @@ class DataProvider:
 
 class FileDataProvider(DataProvider):
     def __init__(self, path: str, feed_id="", lenient=False, disable_normalization=False, **kwargs):
-        super().__init__()
-        self.path = path
-        self.feed_id = feed_id
-        self.lenient = lenient
-        self.disable_normalization = disable_normalization
+        super().__init__(feed_id, lenient, disable_normalization, **kwargs)
+        self._path = path
+        self._folder_source = FolderSource(self.path)
 
     def load_data_source(self, dao: Dao) -> bool:
         @transactional(dao.session())
         def _do_load_gtfs():
-            with Gtfs(ZipFileSource(self.path)).load() as gtfs:
+            with Gtfs(self.folder_source).load() as gtfs:
                 from gtfslib.converter import _convert_gtfs_model
                 _convert_gtfs_model(self.feed_id, gtfs, dao, self.lenient, self.disable_normalization)
 
         _do_load_gtfs()
         return super().load_data_source(dao)
 
+    @property
+    def path(self):
+        return self._path
+
+    @property
+    def folder_source(self):
+        return self._folder_source
+
 
 class HttpDataProvider(FileDataProvider):
     def __init__(self, url: str, feed_id="", lenient=False, disable_normalization=False, **kwargs):
-        super().__init__("feed.zip", feed_id, lenient, disable_normalization, **kwargs)
-        self.url = url
+        super().__init__(self.__load_data(url), feed_id, lenient, disable_normalization, **kwargs)
+        self._url = url
 
-    def load_data_source(self, dao: Dao) -> bool:
-        # logging.info("importing data from url {} for feed id {}".format(url, feed_id))
-        response = requests.get(self.url)
-        # remove existing file
-        if os.path.exists(self.path):
-            os.remove(self.path)
+    def __load_data(self, url: str):
+        import tempfile
+        tmp = tempfile.NamedTemporaryFile()
+        response = requests.get(url)
+
         # save the new one
-        with open(self.path, 'wb') as r:
+        with open(tmp.name + ".zip", 'wb') as r:
             r.write(response.content)
-        return super().load_data_source(dao)
+
+        return tmp.name + ".zip"
+
+    @property
+    def url(self):
+        return self._url
 
 
 class ApiDataProvider(DataProvider):
