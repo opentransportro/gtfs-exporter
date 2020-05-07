@@ -3,12 +3,10 @@
 """
 
 from setuptools import setup, find_packages
-import exporter
-
 
 setup(
     name='gtfs-exporter',
-    version=exporter.__version__,
+    version="1.0.0",
     description="GTFS processing app",
     long_description="An open source library for reading, databasing, querying and manipulating GTFS-based transit data",
     url='https://github.com/opentransportro/gtfs-exporter',

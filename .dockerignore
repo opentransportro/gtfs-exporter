@@ -1,0 +1,7 @@
+.git
+tmp
+venv
+*.zip
+*.bz2
+*.sqlite
+*.log
