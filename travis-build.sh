@@ -37,7 +37,7 @@ function imagedeploy {
         #master branch, build and tag as latest
         docker build --tag="$ORG/$1:dev-$DOCKER_TAG" .
         docker push $ORG/$1:dev-$DOCKER_TAG
-        tagandpush $1 "dev" "dev-$DOCKER_TAG"
+        tagandpush $1 "dev" ""
       else
         #check if branch is greenkeeper branch
         echo Not Pushing greenkeeper to docker hub
