@@ -40,10 +40,8 @@ import os
 import subprocess
 
 from docopt import docopt
-from logging import StreamHandler, FileHandler
 import logging
 import logging.handlers
-import sys
 import shutil
 from gtfslib.dao import Dao
 from gtfslib.model import Route
@@ -85,7 +83,7 @@ class Exporter:
         if which('pfaedle') is None:
             self.logger.error("no support for generating shapes, pfaedle not found. Please clone from "
                               "https://github.com/opentransportro/pfaedle")
-            pass
+            return
             # need to clone and build repo since this tool is needed for generating shapes
 
         # download maps
