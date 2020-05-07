@@ -1,8 +1,9 @@
-from exporter.Providers import ApiDataProvider
-from exporter.api.ApiProviders import BucharestApiDataProvider, IasiApiDataProvider
+from exporter.provider import ApiDataProvider
+from exporter.api.bucharest import BucharestApiDataProvider
+from exporter.api.iasi import IasiApiDataProvider
 
 
-class ApiProviderBuilder:
+class ProviderBuilder:
     def __init__(self, provider: str, feed_id="", lenient=False, disable_normalization=False, **kwargs):
         self.provider = provider
         self.feed_id = feed_id

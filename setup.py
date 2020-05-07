@@ -29,14 +29,14 @@ setup(
     ],
     keywords='GTFS transit exporter',
     packages=find_packages(),
-    install_requires=['gtfslib', 'clint', 'pandas'],
+    install_requires=['gtfslib', 'clint', 'pandas', 'pygithub', 'environs'],
     extras_require={
         'dev': ['check-manifest'],
         'test': ['coverage'],
     },
     entry_points={
         'console_scripts': [
-            'gtfsprocess=exporter.main:main',
+            'gtfs-process=exporter.main:main',
         ],
     },
 )

@@ -3,20 +3,20 @@ from zipfile import ZipFile
 import requests
 import os
 import exporter
-import logging
 from gtfslib.dao import Dao, transactional
 from gtfslib.csvgtfs import Gtfs
 
 
 class FolderSource(object):
-    def __init__(self, inputfile):
-        if not os.path.exists(exporter.__temp_path__) and os.path.exists(inputfile):
-            with ZipFile(inputfile, "r") as zip_ref:
+    def __init__(self, input_file):
+        if not os.path.exists(exporter.__temp_path__) and os.path.exists(input_file):
+            with ZipFile(input_file, "r") as zip_ref:
                 zip_ref.extractall(exporter.__temp_path__)
 
     def open(self, filename, mode='rU'):
-        if os.path.exists(exporter.__temp_path__ + filename):
-            return open(exporter.__temp_path__ + filename, mode + "b")
+        f = os.path.join(exporter.__temp_path__, filename)
+        if os.path.exists(f):
+            return open(f, mode + "b")
 
         raise KeyError(filename)
 
@@ -26,13 +26,25 @@ class FolderSource(object):
 
 class DataProvider:
     def __init__(self, feed_id="", lenient=False, disable_normalization=False, **kwargs):
-        self.feed_id = feed_id
-        self.lenient = lenient
-        self.disable_normalization = disable_normalization
+        self._feed_id = feed_id
+        self._lenient = lenient
+        self._disable_normalization = disable_normalization
 
     def load_data_source(self, dao: Dao) -> bool:
         """Load in the file for extracting text."""
         pass
+
+    @property
+    def feed_id(self):
+        return self._feed_id
+
+    @property
+    def lenient(self):
+        return self._lenient
+
+    @property
+    def disable_normalization(self):
+        return self._disable_normalization
 
 
 class FileDataProvider(DataProvider):

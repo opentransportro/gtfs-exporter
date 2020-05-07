@@ -1,13 +1,11 @@
 """gtfs-exporter - GTFS to GTFS' conversion tool and database loader
 Usage:
-  gtfs-exporter <database> (--provider=<provider> | --delete | --list ) [--url=<url>] [--file=<file>] [--id=<id>]
+  gtfs-exporter (--provider=<provider> | --delete | --list ) [--url=<url>] [--file=<file>] [--id=<id>]
                         [--logsql] [--lenient] [--schema=<schema>]
                         [--disablenormalize]
   gtfs-exporter (-h | --help)
   gtfs-exporter --version
 Options:
-  <database>           The database to use. If a file, assume SQLite.
-                       For PostgreSQL: "postgresql://user:pwd@host:port/db".
   --provider=<provider> The provider type. Can be file, url or api.
   --url=<url>
   --file=<file>
@@ -24,139 +22,32 @@ Options:
                        be interpolated, and shape_dist_traveled will not be
                        computed or converted to meters.
 Examples:
-  gtfs-exporter db.sqlite --load=sncf.zip --id=sncf
-        Load the GTFS sncf.zip into db.sqlite using id "sncf",
-        deleting previous data.
-  gtfs-exporter db.sqlite --delete --id=moontransit
+  gtfs-exporter --provider=url --url=https://api.opentransport.ro/gtfs/v1/static --id=timisoara
+        Load GTFS from url using id "sncf", deleting previous data.
+  gtfs-exporter --delete --id=moontransit
         Delete the "moontransit" feed from the database.
-  gtfs-exporter db.sqlite --list
-        List all feed IDs from db.sqlite
-  gtfs-exporter postgresql://gtfs@localhost/gtfs --load gtfs.zip
-        Load gtfs.zip into a postgresql database,
-        using a default (empty) feed ID.
+  gtfs-exporter --list
+        List all feed IDs from database
 Authors:
 """
-import os
-import subprocess
 import sys
-
+import os
+import glob
 from docopt import docopt
 import logging
 import logging.handlers
-import shutil
-from gtfslib.dao import Dao
-from gtfslib.model import Route
-from exporter.api.Builder import ApiProviderBuilder
-from exporter.GtfsWritter import GtfsWritter, WritterContext
-from exporter.Providers import DataProvider, FileDataProvider, HttpDataProvider
-from exporter import __version__ as version, __temp_path__ as tmp_path, __output_path__ as out_path
-
-
-class Exporter:
-    def __init__(self, arguments, provider: DataProvider):
-        self.provider = provider
-        self.arguments = arguments
-        self.logger = logging.getLogger('grfsexporter')
-
-        if arguments['--id'] is None:
-            arguments['--id'] = ""
-
-        database = arguments['<database>']
-        if os.path.exists(database):
-            os.remove(database)
-
-        self.dao = Dao(database, sql_logging=arguments['--logsql'], schema=arguments['--schema'])
-
-        if arguments['--list']:
-            for feed in self.dao.feeds():
-                print(feed.feed_id if feed.feed_id != "" else "(default)")
-
-        if arguments['--delete'] or arguments['--load']:
-            feed_id = arguments['--id']
-            existing_feed = self.dao.feed(feed_id)
-            if existing_feed:
-                self.logger.warning("Deleting existing feed ID '%s'" % feed_id)
-                self.dao.delete_feed(feed_id)
-                self.dao.commit()
-
-    def generate_shapes(self):
-        self.logger.info("searching for pfaedle support for generating shapes")
-        if shutil.which('pfaedle') is None:
-            self.logger.error("no support for generating shapes, pfaedle not found. Please clone from "
-                              "https://github.com/opentransportro/pfaedle")
-            return
-            # need to clone and build repo since this tool is needed for generating shapes
-
-        # download maps
-        self.logger.info("downloading maps required")
-        if not os.path.exists(tmp_path + "map.osm"):
-            filename = "../map.osm.bz2"
-            if not os.path.exists("../map.osm.bz2"):
-                self.logger.info("downloading from https://download.geofabrik.de/europe/romania-latest.osm.bz2")
-                import requests
-                file = requests.get("https://download.geofabrik.de/europe/romania-latest.osm.bz2", stream=True)
-
-                with open("../map.osm.bz2", "wb") as exported_file:
-                    total_length = int(file.headers.get('content-length'))
-                    from clint.textui import progress
-                    for ch in progress.bar(file.iter_content(chunk_size=2391975),
-                                           expected_size=(total_length / 1024) + 1):
-                        if ch:
-                            exported_file.write(ch)
-
-            self.logger.info("expanding map file")
-
-            import bz2
-            with open(tmp_path + "map.osm", 'wb') as output:
-                with bz2.BZ2File(filename, 'rb') as input:
-                    shutil.copyfileobj(input, output)
-
-        import exporter
-        # removing not valid shape references
-        exporter.remove_column(tmp_path + "trips.txt", "shape_id")
-
-        self.logger.info("generating shapes")
-        exporter.run_command(
-            ['pfaedle', '-D', '--inplace', '-ddebug-out', '-o' + out_path, '--write-trgraph', '-mall',
-             '-x' + tmp_path + 'map.osm', tmp_path], self.logger)
-
-    def process_gtfs(self):
-        self.logger.info("Importing data from provided source")
-        self.provider.load_data_source(self.dao)
-
-        for route in self.dao.routes():
-            print("updating route [%s] setting correct color" % (route.route_long_name))
-
-            route.route_text_color = "FFFFFF"
-
-            if route.route_type == Route.TYPE_BUS:
-                route.route_color = "195BAD"
-            elif route.route_type == Route.TYPE_TRAM:
-                route.route_color = "FFAD33"
-            elif route.route_type == Route.TYPE_RAIL:
-                route.route_color = "FF5B33"
-            elif route.route_type == Route.TYPE_CABLECAR:
-                route.route_color = "FF8433"
-            elif route.route_type == Route.TYPE_SUBWAY:
-                route.route_color = "D13333"
-            elif route.route_type == Route.TYPE_FERRY:
-                route.route_color = "62A9DD"
-
-        self.dao.session().commit()
-
-        self.logger.info("Processing data from provided source")
-
-        # Here we should use a rule processor to have more flexibility when processing data
-        # self.processor.process(ruleset)
-        class Args:
-            filter = None
-
-        self.logger.info("Generating archive with name feed-new.zip")
-        writer = GtfsWritter(WritterContext(self.dao, Args()), bundle="feed-new.zip")
-        writer.run()
+from exporter.api.builder import ProviderBuilder
+from exporter.provider import DataProvider, FileDataProvider, HttpDataProvider
+from exporter import Exporter
+from exporter import __version__ as version, __temp_path__ as tmp_path, __output_path__ as out_path, \
+    __cwd_path__ as app_path
+from environs import Env
 
 
 def main():
+    env = Env()
+    env.read_env()  # read .env file, if it exists
+
     logger = logging.getLogger('grfsexporter')
     logger.setLevel(logging.INFO)
     fh = logging.handlers.RotatingFileHandler('../export.log', mode="w", maxBytes=10240, backupCount=5)
@@ -169,30 +60,35 @@ def main():
     #     shutil.rmtree(tmp_path)
 
     arguments = docopt(__doc__, version='gtfs-exporter %s' % version)
-
-    # db.sqlite --provider=file --file=sncf.zip --id=sncf
-    privider_type = arguments['--provider']
+    provider_type = arguments['--provider']
     provider = DataProvider()
-    if privider_type == "file":
+    if provider_type == "file":
         provider = FileDataProvider(arguments['--file'],
                                     feed_id=arguments['--id'],
                                     lenient=arguments['--lenient'],
                                     disable_normalization=arguments['--disablenormalize'])
-    elif privider_type == "url":
+    elif provider_type == "url":
         provider = HttpDataProvider(arguments['--url'],
                                     feed_id=arguments['--id'],
                                     lenient=arguments['--lenient'],
                                     disable_normalization=arguments['--disablenormalize'])
-    elif privider_type == "api":
-        builder = ApiProviderBuilder(arguments['--url'],
-                                     feed_id=arguments['--id'],
-                                     lenient=arguments['--lenient'],
-                                     disable_normalization=arguments['--disablenormalize'])
+    elif provider_type == "api":
+        builder = ProviderBuilder(arguments['--url'],
+                                  feed_id=arguments['--id'],
+                                  lenient=arguments['--lenient'],
+                                  disable_normalization=arguments['--disablenormalize'])
         provider = builder.build()
 
     instance = Exporter(arguments, provider)
     instance.generate_shapes()
     instance.process_gtfs()
+
+    from exporter.vcs.github import ReleaseGenerator
+    rg = ReleaseGenerator(env("GH_REPO"), env("GH_TOKEN"))
+
+    rg.generate([
+                    os.path.join(app_path, f"gtfs-{arguments['--id']}.zip"),
+                ] + glob.glob(os.path.join(tmp_path, "*.json")))
 
 
 if __name__ == '__main__':
