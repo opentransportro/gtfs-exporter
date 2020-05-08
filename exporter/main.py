@@ -40,7 +40,7 @@ from exporter.api.builder import ProviderBuilder
 from exporter.provider import DataProvider, FileDataProvider, HttpDataProvider
 from exporter import Exporter
 from exporter import __version__ as version, __temp_path__ as tmp_path, __output_path__ as out_path, \
-    __cwd_path__ as app_path
+    __cwd_path__ as app_path, __map_path__ as map_path
 from environs import Env
 
 
@@ -58,6 +58,25 @@ def main():
 
     # if os.path.exists(tmp_path):
     #     shutil.rmtree(tmp_path)
+
+    logger.info("creating work directories if not exist")
+    try:
+        logger.info(" - creating out")
+        os.mkdir(out_path)
+    except:
+        pass
+
+    try:
+        logger.info(" - creating tmp")
+        os.mkdir(tmp_path)
+    except:
+        pass
+
+    try:
+        logger.info(" - creating map")
+        os.mkdir(map_path)
+    except:
+        pass
 
     arguments = docopt(__doc__, version='gtfs-exporter %s' % version)
     provider_type = arguments['--provider']

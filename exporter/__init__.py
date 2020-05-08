@@ -3,6 +3,7 @@ import shutil
 import logging
 import threading
 import subprocess
+import time, os, stat
 
 from gtfslib.dao import Dao
 from gtfslib.model import Route
@@ -13,6 +14,7 @@ from exporter.writer import Writer, Context
 __version__ = "1.0.0"
 __cwd_path__ = os.path.abspath(os.getcwd())
 __temp_path__ = os.path.join(__cwd_path__, "tmp")
+__map_path__ = os.path.join(__cwd_path__, "map")
 __output_path__ = os.path.join(__cwd_path__, "out")
 
 
@@ -49,6 +51,10 @@ class LogPipe(threading.Thread):
         """Close the write end of the pipe.
         """
         os.close(self.fdWrite)
+
+
+def file_age_in_seconds(pathname):
+    return int(time.time() - os.stat(pathname)[stat.ST_MTIME])
 
 
 def run_command(args: [], logger=None) -> bool:
@@ -107,11 +113,17 @@ class Exporter:
 
         # download maps
         self.logger.info("downloading maps required")
-        map_file = os.path.join(__temp_path__, "map.osm")
-        map_archive = os.path.join(__cwd_path__, "map.osm.bz2")
+        map_file = os.path.join(__map_path__, "map.osm")
+        map_archive = os.path.join(__map_path__, "map.osm.bz2")
 
-        if not os.path.exists(map_file):
-            if not os.path.exists(map_archive):
+        if not os.path.exists(map_file) or file_age_in_seconds(map_file) > 604800:
+            if file_age_in_seconds(map_file) > 604800 and os.path.exists(map_file):
+                self.logger.warning("Map file to old removing and fetching new one")
+                os.remove(map_file)
+            else:
+                self.logger.info("Map file is okey, using the cached one")
+
+            if not os.path.exists(map_archive) or file_age_in_seconds(map_file) > 604800:
                 self.logger.info("downloading from https://download.geofabrik.de/europe/romania-latest.osm.bz2")
                 import requests
                 file = requests.get("https://download.geofabrik.de/europe/romania-latest.osm.bz2", stream=True)
@@ -131,12 +143,16 @@ class Exporter:
                 with bz2.BZ2File(map_archive, 'rb') as input:
                     shutil.copyfileobj(input, output)
 
+            # cleanup the archive as we dont use it
+            os.remove(map_archive)
+
         # removing not valid shape references
         remove_column(os.path.join(__temp_path__, "trips.txt"), "shape_id")
 
         self.logger.info("generating shapes")
         run_command(
-            ['pfaedle', '-D', '--inplace', '-dtmp', '-o' + __temp_path__, '--write-trgraph', '--write-graph', '--write-cgraph', '-mall',
+            ['pfaedle', '-D', '--inplace', '-dtmp', '-o' + __temp_path__, '--write-trgraph', '--write-graph',
+             '--write-cgraph', '-mall',
              '-x' + map_file, __temp_path__], self.logger)
 
     def process_gtfs(self):
@@ -170,6 +186,6 @@ class Exporter:
         class Args:
             filter = None
 
-        self.logger.info("Generating archive with name feed-new.zip")
-        writer = Writer(Context(self.dao, Args()), bundle=f"gtfs-{self.provider.feed_id}.zip")
-        writer.run()
+        self.logger.info(f"Generating archive with name gtfs-{self.provider.feed_id}.zip")
+        w = Writer(Context(self.dao, Args()), bundle=f"gtfs-{self.provider.feed_id}.zip")
+        w.run()
