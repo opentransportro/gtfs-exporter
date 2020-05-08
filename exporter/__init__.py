@@ -120,8 +120,6 @@ class Exporter:
             if os.path.exists(map_file) and file_age_in_seconds(map_file) > 604800:
                 self.logger.warning("Map file to old removing and fetching new one!")
                 os.remove(map_file)
-            else:
-                self.logger.info("Map file ok, using the cached one")
 
             if not os.path.exists(map_archive) or file_age_in_seconds(map_archive) > 604800:
                 self.logger.info("downloading from https://download.geofabrik.de/europe/romania-latest.osm.bz2")
