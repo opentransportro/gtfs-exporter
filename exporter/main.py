@@ -46,7 +46,7 @@ from environs import Env
 
 def main():
     env = Env()
-    env.read_env()  # read .env file, if it exists
+    env.read_env(app_path)  # read .env file, if it exists
 
     logger = logging.getLogger('grfsexporter')
     logger.setLevel(logging.INFO)
@@ -103,11 +103,17 @@ def main():
     instance.process_gtfs()
 
     from exporter.vcs.github import ReleaseGenerator
-    rg = ReleaseGenerator(env("GH_REPO"), env("GH_TOKEN"))
+    gh_repo = env.str("GH_REPO", None)
+    gh_token = env.str("GH_TOKEN", None)
 
-    rg.generate([
-                    os.path.join(app_path, f"gtfs-{arguments['--id']}.zip"),
-                ] + glob.glob(os.path.join(tmp_path, "*.json")))
+    if not (gh_repo is None or gh_token is None):
+        rg = ReleaseGenerator(gh_repo, gh_token)
+
+        rg.generate([
+                        os.path.join(app_path, f"gtfs-{arguments['--id']}.zip"),
+                    ] + glob.glob(os.path.join(tmp_path, "*.json")))
+    else:
+        logger.warning("Skipping release generation since provided repo and tokens do no exist")
 
 
 if __name__ == '__main__':
