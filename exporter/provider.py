@@ -9,7 +9,7 @@ from gtfslib.csvgtfs import Gtfs
 
 class FolderSource(object):
     def __init__(self, input_file):
-        if not os.path.exists(exporter.__temp_path__) and os.path.exists(input_file):
+        if os.path.exists(input_file):
             with ZipFile(input_file, "r") as zip_ref:
                 zip_ref.extractall(exporter.__temp_path__)
 
