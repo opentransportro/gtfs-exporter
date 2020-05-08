@@ -112,18 +112,18 @@ class Exporter:
             return
 
         # download maps
-        self.logger.info("downloading maps required")
+        self.logger.info("Checking if downloading maps is required.")
         map_file = os.path.join(__map_path__, "map.osm")
         map_archive = os.path.join(__map_path__, "map.osm.bz2")
 
         if not os.path.exists(map_file) or file_age_in_seconds(map_file) > 604800:
-            if file_age_in_seconds(map_file) > 604800 and os.path.exists(map_file):
-                self.logger.warning("Map file to old removing and fetching new one")
+            if os.path.exists(map_file) and file_age_in_seconds(map_file) > 604800:
+                self.logger.warning("Map file to old removing and fetching new one!")
                 os.remove(map_file)
             else:
-                self.logger.info("Map file is okey, using the cached one")
+                self.logger.info("Map file ok, using the cached one")
 
-            if not os.path.exists(map_archive) or file_age_in_seconds(map_file) > 604800:
+            if not os.path.exists(map_archive) or file_age_in_seconds(map_archive) > 604800:
                 self.logger.info("downloading from https://download.geofabrik.de/europe/romania-latest.osm.bz2")
                 import requests
                 file = requests.get("https://download.geofabrik.de/europe/romania-latest.osm.bz2", stream=True)
