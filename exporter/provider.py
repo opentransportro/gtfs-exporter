@@ -3,6 +3,7 @@ from zipfile import ZipFile
 import requests
 import os
 import exporter
+import pandas as pd
 from gtfslib.dao import Dao, transactional
 from gtfslib.csvgtfs import Gtfs
 
@@ -12,6 +13,11 @@ class FolderSource(object):
         if os.path.exists(input_file):
             with ZipFile(input_file, "r") as zip_ref:
                 zip_ref.extractall(exporter.__temp_path__)
+
+        # change route type from 5 or 11 to 3 since other are not supported by opentripplanner
+        r = pd.read_csv(os.path.join(exporter.__temp_path__, "routes.txt"))
+        r.loc[r.route_type.isin([5, 11]), 'route_type'] = 3
+        r.to_csv(os.path.join(exporter.__temp_path__, "routes.txt"), index=False, sep=',')
 
     def open(self, filename, mode='rU'):
         f = os.path.join(exporter.__temp_path__, filename)
