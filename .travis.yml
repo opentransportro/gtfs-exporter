@@ -8,6 +8,9 @@ jobs:
   include:
     - stage: build
       script: ./travis-build.sh
+    - stage: test
+      script: docker run --rm opentransport/gtfs-exporter:dev  gtfs-process --provider=url --url=https://tursib.ro/trasee/gtfs --id=test
+
 
 notifications:
   email:
