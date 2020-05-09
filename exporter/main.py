@@ -41,11 +41,11 @@ from exporter.provider import DataProvider, FileDataProvider, HttpDataProvider
 from exporter import Exporter
 from exporter import __version__ as version, __temp_path__ as tmp_path, __output_path__ as out_path, \
     __cwd_path__ as app_path, __map_path__ as map_path
+from exporter.util.perf import measure_execution_time
 from environs import Env
 
 
 def init_logging():
-    sh = logging.StreamHandler(sys.stdout)
 
     logging.basicConfig()
     logging.getLogger().setLevel(logging.INFO)
@@ -53,9 +53,11 @@ def init_logging():
     logger = logging.getLogger('gtfsexporter')
     logger.setLevel(logging.INFO)
 
-    logger.addHandler(sh)
+    # sh = logging.StreamHandler(sys.stdout)
+    # logger.addHandler(sh)
 
 
+@measure_execution_time
 def main():
     env = Env()
     env.read_env(app_path)  # read .env file, if it exists
