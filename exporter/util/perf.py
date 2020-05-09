@@ -1,10 +1,10 @@
 import time
 import logging
 
-logger = logging.getLogger("gtfsexporter")
-
 
 def measure_execution_time(method):
+    logger = logging.getLogger("gtfsexporter")
+
     def timed(*args, **kw):
         ts = time.time()
         result = method(*args, **kw)
