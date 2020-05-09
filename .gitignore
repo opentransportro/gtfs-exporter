@@ -2,7 +2,9 @@ venv
 .idea
 tmp
 *.sqlite
+*.sqlite-journal
 *.zip
 *.bz2
 *.log
 **/__pycache__/*
+.DS_Store
