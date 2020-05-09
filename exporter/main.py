@@ -43,25 +43,17 @@ from exporter import __version__ as version, __temp_path__ as tmp_path, __output
     __cwd_path__ as app_path, __map_path__ as map_path
 from environs import Env
 
-def init_logging():
 
+def init_logging():
     sh = logging.StreamHandler(sys.stdout)
 
     logging.basicConfig()
-    logging.getLogger().setLevel(logging.DEBUG)
+    logging.getLogger().setLevel(logging.INFO)
 
     logger = logging.getLogger('grfsexporter')
     logger.setLevel(logging.INFO)
 
-    # logger.addHandler(sh)
-
-    # requests_log = logging.getLogger("requests.packages.urllib3")
-    # requests_log.setLevel(logging.DEBUG)
-    # requests_log.propagate = True
-
-    requests_logger = logging.getLogger("requests")
-    requests_logger.setLevel(logging.DEBUG)
-    requests_logger.addHandler(sh)
+    logger.addHandler(sh)
 
 
 def main():

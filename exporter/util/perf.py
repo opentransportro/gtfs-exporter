@@ -13,7 +13,7 @@ def measure_execution_time(method):
             name = kw.get('log_name', method.__name__.upper())
             kw['log_time'][name] = int((te - ts) * 1000)
         else:
-            logger.info('%r took %2.2f ms' % (method.__name__, (te - ts) * 1000))
+            logger.debug('%r took %2.2f ms' % (method.__name__, (te - ts) * 1000))
             return result
 
     return timed
