@@ -7,7 +7,10 @@ class ReleaseGenerator(object):
         self.token = token
         self.repo = repo
 
-    def generate(self, files: [str] = []):
+    def generate(self, files=None):
+        if files is None:
+            files = []
+
         g = Github(self.token)
         repo = g.get_repo(self.repo)
 

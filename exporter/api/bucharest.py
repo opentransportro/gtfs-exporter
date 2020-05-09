@@ -1,6 +1,171 @@
+import logging
+import requests
+import json
+import time
+import polyline
+from gtfslib.dao import Dao
+from gtfslib.model import Agency, FeedInfo, Route, Trip, Stop, StopTime, Shape, ShapePoint
 from exporter.provider import ApiDataProvider
 
+logger = logging.getLogger("grfsexporter")
+
+SLEEP_TIME = 0
+class RequestError(Exception):
+    pass
 
 class BucharestApiDataProvider(ApiDataProvider):
+    # base api url
+    BASE_URL = "https://info.stbsa.ro/rp/api/"
+
     def __init__(self, feed_id="", lenient=False, disable_normalization=False, **kwargs):
-        super().__init__()
+        super().__init__(feed_id, lenient, disable_normalization)
+        # Optional, generate empty feed info
+        self.feedinfo = FeedInfo(self.feed_id)
+
+    def load_data_source(self, dao: Dao) -> bool:
+        self.dao = dao
+        self.__load_agencies()
+        self.__load_routes()
+        self.__load_trips()
+        return super().load_data_source(dao)
+
+    def __load_agencies(self):
+        self.agency_ids = set()
+        logger.info("Importing agencies...")
+
+        stb = Agency(self.feed_id, 1, "STB SA", "https://stbsa.ro,Europe/Bucharest", "Europe/Bucharest", **{
+            "agency_lang": "ro",
+            "agency_email": "contact@stbsa.ro",
+            "agency_fare_url": "http://stbsa.ro/portofel_electronic.php",
+            "agency_phone": "0213110595"
+        })
+
+        metrorex = Agency(self.feed_id, 2, "METROREX SA", "https://metrorex.ro,Europe/Bucharest", "Europe/Bucharest",
+                          **{
+                              "agency_lang": "ro",
+                              "agency_email": "contact@metrorex.ro",
+                              "agency_fare_url": "http://metrorex.ro/titluri_de_calatorie_p1381-1",
+                              "agency_phone": "0213193601"
+                          })
+        self.dao.add(stb)
+        self.agency_ids.add(stb.agency_id)
+        self.dao.add(metrorex)
+        self.agency_ids.add(metrorex.agency_id)
+
+        self.dao.flush()
+        self.dao.commit()
+        logger.info("Imported %d agencies" % 2)
+        pass
+
+    def __load_routes(self):
+        ### https://info.stbsa.ro/rp/api/lines/
+        stops = set()
+
+        with requests.get("https://info.stbsa.ro/rp/api/lines/") as response:
+            route_data = json.loads(self.__validate_response(response))
+            logger.info(f"total lines to process {len(route_data['lines'])}")
+            line_nb = 1
+            for line in route_data["lines"]:
+                logger.info(f" - processing line {line_nb} of {len(route_data['lines'])}")
+                r = Route(self.feed_id, line['id'], line['organization']['id'],
+                          self.__parse_route_type(line['type']), **{
+                        "route_color": line['color'],
+                        "route_text_color": "000000",
+                    })
+                self.dao.add(r)
+                # self.dao.flush()
+
+                # fetch both directions
+                for direction in [0, 1]:
+                    time.sleep(SLEEP_TIME)
+                    logger.debug(
+                        f"requesting data from https://info.stbsa.ro/rp/api/lines/{r.route_id}/direction/{direction}")
+                    with requests.get(
+                            f"https://info.stbsa.ro/rp/api/lines/{r.route_id}/direction/{direction}") as response:
+                        trips = []
+                        trip_data = json.loads(self.__validate_response(response))
+                        stop_index = 0
+
+                        shape_points = polyline.decode(trip_data['segment_path'])
+
+                        logger.debug("processing shape")
+                        shp = Shape(self.feed_id, f"shp{r.agency_id}_{r.route_id}_{direction}")
+                        self.dao.add(shp)
+                        shp_point_index = 0
+                        for shape_point in shape_points:
+                            shp_point = ShapePoint(self.feed_id, shp.shape_id, shp_point_index, shape_point[0],
+                                                   shape_point[1], 0)
+                            self.dao.add(shp_point)
+                            shp_point_index += 1
+
+                        logger.info(f"total stops to process {len(trip_data['stops'])}")
+                        for stop in trip_data['stops']:
+                            logger.info(f" - processing stop {stop_index + 1} of {len(trip_data['stops'])}")
+                            s = Stop(self.feed_id, stop['id'], stop['name'], stop['lat'], stop['lng'])
+                            if s.stop_id not in stops:
+                                stops.add(s.stop_id)
+                                self.dao.add(s)
+                                # self.dao.flush()
+
+                            time.sleep(SLEEP_TIME)
+                            # def process_route_stop(r: Route, s: Stop):
+                            logger.debug(
+                                f"requesting data from https://info.stbsa.ro/rp/api/lines/{r.route_id}/stops/{s.stop_id}")
+                            with requests.get(
+                                    f"https://info.stbsa.ro/rp/api/lines/{r.route_id}/stops/{s.stop_id}") as response:
+
+                                stoptim_data = json.loads(self.__validate_response(response))
+                                index = 0
+                                if stoptim_data[0]['lines'][0]['timetable'] is None:
+                                    continue
+
+                                for timetable in stoptim_data[0]['lines'][0]['timetable']:
+                                    for minute in timetable['minutes']:
+                                        if len(trips) <= index:
+                                            t = Trip(self.feed_id, f"{r.agency_id}_{r.route_id}_{direction}_{index}",
+                                                     r.route_id,
+                                                     f"s{r.agency_id}",
+                                                     **{"trip_short_name": stoptim_data[0]['name'],
+                                                        "trip_headsign": stoptim_data[0]['description'],
+                                                        "shape_id": shp.shape_id})
+                                            trips.append(t)
+                                            r.trips.append(t)
+
+                                            self.dao.add(t)
+                                            # self.dao.flush()
+                                        else:
+                                            t = trips[index]
+
+                                        st = StopTime(self.feed_id, t.trip_id, s.stop_id, stop_index,
+                                                      f"{timetable['hour']}:{minute}:00",
+                                                      f"{timetable['hour']}:{minute}:00", 0)
+                                        t.stop_times.append(st)
+                                        self.dao.add(st)
+                                        # self.dao.flush()
+                                        index += 1
+                            stop_index += 1
+
+                self.dao.flush()
+                line_nb += 1
+
+                print(line)
+                print(r)
+
+    def __load_trips(self):
+        pass
+
+    def __parse_route_type(self, type: str):
+        switcher = {
+            'BUS': Route.TYPE_BUS,
+            'SUBWAY': Route.TYPE_SUBWAY,
+            'TRAM': Route.TYPE_TRAM,
+            'CABLE_CAR': Route.TYPE_CABLECAR,
+        }
+
+        return switcher.get(type)
+
+    def __validate_response(self, respose):
+        if not respose.ok:
+            raise RequestError()
+
+        return respose.text
