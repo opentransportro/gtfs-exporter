@@ -5,6 +5,7 @@ tmp
 *.sqlite-journal
 *.zip
 *.bz2
-*.log
+*.log*
+map
 **/__pycache__/*
 .DS_Store
