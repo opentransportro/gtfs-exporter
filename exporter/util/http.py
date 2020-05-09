@@ -1,14 +1,18 @@
-import requests
 import logging
-import time
+
+import requests
+
 from exporter.util.perf import measure_execution_time
 
-logger = logging.getLogger("gtfsexpoter")
+logger = logging.getLogger("gtfsexporter")
+
+shared_session = requests.Session()
 
 
 class Request(object):
     def __init__(self, url):
         self._url = url
+        self.encoding = 'utf-8'
 
     @property
     def url(self):
@@ -21,7 +25,7 @@ class Request(object):
 
         logger.debug(f"requesting data from ${request_url}")
         # ts = time.time()
-        response = requests.get(request_url)
+        response = shared_session.get(request_url, headers={'Content-Type': 'application/json'})
         # te = time.time()
         # logger.info('%r took %2.2f ms' % (request_url, (te - ts) * 1000))
 
