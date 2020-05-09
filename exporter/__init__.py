@@ -80,7 +80,7 @@ class Exporter:
     def __init__(self, arguments, provider: DataProvider):
         self.provider = provider
         self.arguments = arguments
-        self.logger = logging.getLogger('grfsexporter')
+        self.logger = logging.getLogger('gtfsexporter')
 
         if arguments['--id'] is None:
             arguments['--id'] = ""

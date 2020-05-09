@@ -50,7 +50,7 @@ def init_logging():
     logging.basicConfig()
     logging.getLogger().setLevel(logging.INFO)
 
-    logger = logging.getLogger('grfsexporter')
+    logger = logging.getLogger('gtfsexporter')
     logger.setLevel(logging.INFO)
 
     logger.addHandler(sh)
@@ -65,7 +65,7 @@ def main():
     # if os.path.exists(tmp_path):
     #     shutil.rmtree(tmp_path)
 
-    logger = logging.getLogger('grfsexporter')
+    logger = logging.getLogger('gtfsexporter')
     logger.info("creating work directories if not exist")
     try:
         logger.info(" - creating out")

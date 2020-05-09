@@ -8,7 +8,7 @@ from exporter.api.requests import RequestExecutor
 from exporter.util.http import Request
 from exporter.util.perf import measure_execution_time
 
-logger = logging.getLogger("grfsexporter")
+logger = logging.getLogger("gtfsexporter")
 
 SLEEP_TIME = 0
 
