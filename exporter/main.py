@@ -43,22 +43,37 @@ from exporter import __version__ as version, __temp_path__ as tmp_path, __output
     __cwd_path__ as app_path, __map_path__ as map_path
 from environs import Env
 
+def init_logging():
+
+    sh = logging.StreamHandler(sys.stdout)
+
+    logging.basicConfig()
+    logging.getLogger().setLevel(logging.DEBUG)
+
+    logger = logging.getLogger('grfsexporter')
+    logger.setLevel(logging.INFO)
+
+    # logger.addHandler(sh)
+
+    # requests_log = logging.getLogger("requests.packages.urllib3")
+    # requests_log.setLevel(logging.DEBUG)
+    # requests_log.propagate = True
+
+    requests_logger = logging.getLogger("requests")
+    requests_logger.setLevel(logging.DEBUG)
+    requests_logger.addHandler(sh)
+
 
 def main():
     env = Env()
     env.read_env(app_path)  # read .env file, if it exists
 
-    logger = logging.getLogger('grfsexporter')
-    logger.setLevel(logging.INFO)
-    fh = logging.handlers.RotatingFileHandler('../export.log', mode="w", maxBytes=10240, backupCount=5)
-    fh.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-    logger.addHandler(fh)
-    sh = logging.StreamHandler(sys.stdout)
-    logger.addHandler(sh)
+    init_logging()
 
     # if os.path.exists(tmp_path):
     #     shutil.rmtree(tmp_path)
 
+    logger = logging.getLogger('grfsexporter')
     logger.info("creating work directories if not exist")
     try:
         logger.info(" - creating out")
@@ -99,7 +114,7 @@ def main():
         provider = builder.build()
 
     instance = Exporter(arguments, provider)
-    instance.generate_shapes()
+    # instance.generate_shapes()
     instance.process_gtfs()
 
     from exporter.vcs.github import ReleaseGenerator

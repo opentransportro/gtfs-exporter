@@ -9,9 +9,11 @@ import queue
 import requests
 import threading
 
-NTHREADS = 2
+NTHREADS = 8
 DELAY_SECONDS = 0.5
-URLS = ['https://google.com', 'http://yahoo.com', 'http://github.com', 'https://bing.com']
+
+
+# URLS = ['https://google.com', 'http://yahoo.com', 'http://github.com', 'https://bing.com']
 
 # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
@@ -30,14 +32,13 @@ URLS = ['https://google.com', 'http://yahoo.com', 'http://github.com', 'https://
 #         if queued_works < 10:  # do not flood executor's queue
 #             executor.submit(callback)
 
+class RequestWrapper:
+    def __init__(self, callback, *kwargs):
+        self.callback = callback
+        self.params = kwargs
+
 
 class RequestExecutor(threading.Thread):
-    class RequestWrapper:
-        def __init__(self, url, callback, **kwargs):
-            self.url = url
-            self.callback = callback
-            self.params = kwargs
-
     def __init__(self):
         super().__init__()
         self._should_stop = False
@@ -52,12 +53,14 @@ class RequestExecutor(threading.Thread):
     def should_stop(self, new_val):
         self._should_stop = new_val
 
-    def enqueue_request(self, url: str, callback, **kwargs):
-        rw = RequestExecutor.RequestWrapper(url, callback, **kwargs)
+    def enqueue_request(self, callback, *kwargs):
+        rw = RequestWrapper(callback, *kwargs)
         self._queue.put(rw)
+        if not self.is_alive():
+            self.start()
 
     def run(self) -> None:
         while not self._should_stop:
             time.sleep(DELAY_SECONDS)  # do not hit the site too hard
             rw = self._queue.get(block=True)
-            self._thread_pool.submit(rw.callback, **rw.params)
+            self._thread_pool.submit(rw.callback, *rw.params)
