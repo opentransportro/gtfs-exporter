@@ -143,9 +143,10 @@ class BucharestApiDataProvider(ApiDataProvider):
                 else:
                     t = trips[index]
 
-                st = StopTime(self.feed_id, t.trip_id, s.stop_id, stop_index,
-                              f"{timetable['hour']}:{minute}:00",
-                              f"{timetable['hour']}:{minute}:00", 0)
+                # calculate time (in seconds) since midnight
+                schedule_time = int(timetable['hour']) * 3600 + int(minute) * 60
+
+                st = StopTime(self.feed_id, t.trip_id, s.stop_id, stop_index, schedule_time, schedule_time)
                 t.stop_times.append(st)
                 self.dao.add(st)
                 # self.dao.flush()
