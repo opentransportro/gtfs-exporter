@@ -146,7 +146,7 @@ class BucharestApiDataProvider(ApiDataProvider):
                 # calculate time (in seconds) since midnight
                 schedule_time = int(timetable['hour']) * 3600 + int(minute) * 60
 
-                st = StopTime(self.feed_id, t.trip_id, s.stop_id, stop_index, schedule_time, schedule_time)
+                st = StopTime(self.feed_id, t.trip_id, s.stop_id, stop_index, schedule_time, schedule_time, 0)
                 t.stop_times.append(st)
                 self.dao.add(st)
                 # self.dao.flush()
