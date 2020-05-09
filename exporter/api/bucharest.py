@@ -1,5 +1,4 @@
 import logging
-import aiohttp as aiohttp
 import time
 import polyline
 from gtfslib.dao import Dao
@@ -23,7 +22,6 @@ class BucharestApiDataProvider(ApiDataProvider):
         super().__init__(feed_id, lenient, disable_normalization)
         # Optional, generate empty feed info
         self.feedinfo = FeedInfo(self.feed_id)
-        self.session = aiohttp.ClientSession()
         self.request_executor = RequestExecutor()
 
         self.line_request = Request(BASE_URL + "/lines/")
