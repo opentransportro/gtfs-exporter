@@ -1,6 +1,7 @@
 from exporter.provider import ApiDataProvider
-from exporter.api.bucharest import BucharestApiDataProvider
 from exporter.api.iasi import IasiApiDataProvider
+from exporter.api.bucharest import BucharestApiDataProvider
+from exporter.api.constanta import ConstantaApiDataProvider
 
 
 class ProviderBuilder:
@@ -11,7 +12,10 @@ class ProviderBuilder:
         self.disable_normalization = disable_normalization
 
     def build(self) -> ApiDataProvider:
-        if self.provider == "bucharest":
-            return BucharestApiDataProvider(self.feed_id, self.lenient, self.disable_normalization)
-        else:
-            return IasiApiDataProvider(self.feed_id, self.lenient, self.disable_normalization)
+        switcher = {
+            'bucharest': BucharestApiDataProvider(self.feed_id, self.lenient, self.disable_normalization),
+            'constanta': ConstantaApiDataProvider(self.feed_id, self.lenient, self.disable_normalization),
+            'iasi': IasiApiDataProvider(self.feed_id, self.lenient, self.disable_normalization),
+        }
+
+        return switcher.get(self.provider)

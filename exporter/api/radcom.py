@@ -29,7 +29,7 @@ class RadcomApiDataProvider(ApiDataProvider):
     @measure_execution_time
     def load_data_source(self, dao: Dao) -> bool:
         self.dao = dao
-        self.__load_agencies()
+        self._load_agencies()
         self.__load_services()
         self.__load_routes()
         dn = DataNormalizer(dao, self.feed_id)
@@ -38,25 +38,26 @@ class RadcomApiDataProvider(ApiDataProvider):
 
         return super().load_data_source(dao)
 
-    def __load_agencies(self):
-        self.agency_ids = set()
-        logger.info("Importing agencies...")
-
-        stb = Agency(self.feed_id, 1, "Regia Autonomă de Transport în Comun Constanța", "https://ctbus.ro",
-                     "Europe/Bucharest", **{
-                "agency_lang": "ro",
-                "agency_email": "contact@ctbus.ro",
-                "agency_fare_url": "https://www.ctbus.ro/#Tarife",
-                "agency_phone": "0241694960"
-            })
-
-        self.dao.add(stb)
-        self.agency_ids.add(stb.agency_id)
-
-        self.dao.flush()
-        self.dao.commit()
-        logger.info("Imported %d agencies" % 1)
+    def _load_agencies(self):
         pass
+        # self.agency_ids = set()
+        # logger.info("Importing agencies...")
+        #
+        # stb = Agency(self.feed_id, 1, "Regia Autonomă de Transport în Comun Constanța", "https://ctbus.ro",
+        #              "Europe/Bucharest", **{
+        #         "agency_lang": "ro",
+        #         "agency_email": "contact@ctbus.ro",
+        #         "agency_fare_url": "https://www.ctbus.ro/#Tarife",
+        #         "agency_phone": "0241694960"
+        #     })
+        #
+        # self.dao.add(stb)
+        # self.agency_ids.add(stb.agency_id)
+        #
+        # self.dao.flush()
+        # self.dao.commit()
+        # logger.info("Imported %d agencies" % 1)
+        # pass
 
     def __load_services(self):
         start_date = CalendarDate.fromYYYYMMDD("20200301")
@@ -133,52 +134,52 @@ class RadcomApiDataProvider(ApiDataProvider):
         stoptime_data = self.line_stops_request(r.route_id, s.stop_id)
 
         index = 0
-        if(len(stoptime_data[0]['lines']) == 0):
+        if len(stoptime_data[0]['lines']) == 0:
             logger.warning(f"{r} \n {s}")
         if len(stoptime_data[0]['lines']) == 0 or stoptime_data[0]['lines'][0]['timetable'] is None:
             return False
 
         stop_times_dao = []
         timetables = self.__convert_timetable(stoptime_data[0]['lines'][0]['timetable'])
-        # for timetable in stoptime_data[0]['lines'][0]['timetable']:
-        #     for minute in timetable['minutes']:
-        for timetable in timetables:
-                if len(trips) <= index:
-                    t = Trip(self.feed_id, f"{r.agency_id}_{r.route_id}_{direction}_{index}",
-                             r.route_id,
-                             self.service_id,
-                             **{"trip_short_name": stoptime_data[0]['name'],
-                                "trip_headsign": stoptime_data[0]['description'],
-                                "direction_id": direction,
-                                "shape_id": shp.shape_id})
-                    trips.append(t)
-                    # r.trips.append(t)
+        for schedule_time in timetables:
+            if len(trips) <= index:
+                t = Trip(self.feed_id, f"{r.agency_id}_{r.route_id}_{direction}_{index}",
+                         r.route_id,
+                         self.service_id,
+                         **{"trip_short_name": stoptime_data[0]['name'],
+                            "trip_headsign": stoptime_data[0]['description'],
+                            "direction_id": direction,
+                            "shape_id": shp.shape_id})
+                trips.append(t)
+                # r.trips.append(t)
 
-                    self.dao.add(t)
-                    # self.dao.flush()
-                else:
-                    t = trips[index]
+                self.dao.add(t)
+                # self.dao.flush()
+            else:
+                t = trips[index]
+                if t.stop_times[-1].arrival_time > schedule_time:
+                    continue
 
-                # calculate time (in seconds) since midnight
-                schedule_time = int(timetable['hour']) * 3600 + int(minute) * 60
-
-                st = StopTime(self.feed_id, t.trip_id, s.stop_id, stop_index, schedule_time, schedule_time, 0, **{
-                    "stop_headsign": "00000"
-                })
-                # t.stop_times.append(st)
-                stop_times_dao.append(st)
-                index += 1
-        self.dao.bulk_save_objects(stop_times_dao)
+            st = StopTime(self.feed_id, t.trip_id, s.stop_id, stop_index, schedule_time, schedule_time, 0, **{
+                "stop_headsign": "00000"
+            })
+            t.stop_times.append(st)
+            # stop_times_dao.append(st)
+            index += 1
+        # self.dao.bulk_save_objects(stop_times_dao)
 
         return True
 
-    def __convert_timetable(self, timetable) -> []:
-        stoptimes = []
+    @staticmethod
+    def __convert_timetable(timetable) -> list:
+        stoptimes = list()
         for t in timetable:
             for m in t['minutes']:
                 schedule_time = int(t['hour']) * 3600 + int(m) * 60
                 stoptimes.append(schedule_time)
-        return stoptimes.sort()
+        stoptimes.sort()
+
+        return  list(dict.fromkeys(stoptimes))
 
 
     @staticmethod
