@@ -30,19 +30,23 @@ Examples:
         List all feed IDs from database
 Authors:
 """
-import sys
-import os
 import glob
-from docopt import docopt
 import logging
 import logging.handlers
-from exporter.api.builder import ProviderBuilder
-from exporter.provider import DataProvider, FileDataProvider, HttpDataProvider
+import os
+import shutil
+
+from docopt import docopt
+from environs import Env
+
 from exporter import Exporter
 from exporter import __version__ as version, __temp_path__ as tmp_path, __output_path__ as out_path, \
     __cwd_path__ as app_path, __map_path__ as map_path
+from exporter.api.builder import ProviderBuilder
+from exporter.provider import DataProvider, FileDataProvider, HttpDataProvider
 from exporter.util.perf import measure_execution_time
-from environs import Env
+from exporter.util.spatial import ShapeGenerator
+from exporter.vcs.github import ReleaseGenerator
 
 
 def init_logging():
@@ -64,19 +68,20 @@ def main():
 
     init_logging()
 
-    # if os.path.exists(tmp_path):
-    #     shutil.rmtree(tmp_path)
-
     logger = logging.getLogger('gtfsexporter')
     logger.info("creating work directories if not exist")
     try:
         logger.info(" - creating out")
+        if os.path.exists(out_path):
+            shutil.rmtree(out_path)
         os.mkdir(out_path)
     except:
         pass
 
     try:
         logger.info(" - creating tmp")
+        if os.path.exists(tmp_path):
+            shutil.rmtree(tmp_path)
         os.mkdir(tmp_path)
     except:
         pass
@@ -107,11 +112,34 @@ def main():
                                   disable_normalization=arguments['--disablenormalize'])
         provider = builder.build()
 
-    instance = Exporter(arguments, provider)
-    # instance.generate_shapes()
-    instance.process_gtfs()
+    exporter = Exporter(arguments)
+    sg = ShapeGenerator("https://download.geofabrik.de/europe/romania-latest.osm.bz2", out_path)
 
-    from exporter.vcs.github import ReleaseGenerator
+    # flow needs to be different when receiving data from api
+    #  - load
+    #  - process
+    #  - generate initial gtfs files
+    #  - generate shapes for gtfs
+    #  - generate bundle
+    if provider.is_from_api():
+        exporter.load(provider)
+        exporter.process()
+        exporter.export(bundle=False)
+
+        sg.generate()
+        from exporter.util.storage import generate_gtfs_bundle
+        generate_gtfs_bundle(out_path, bundle=f"gtfs-{arguments['--id']}.zip")
+
+    # for zip, url
+    #  - generation of shapes
+    #  - load all the feed to process & interpolate
+    #  - generate feed (bundle)
+    else:
+        sg.generate()
+        exporter.load(provider)
+        exporter.process()
+        exporter.export(bundle=True)
+
     gh_repo = env.str("GH_REPO", None)
     gh_token = env.str("GH_TOKEN", None)
 
@@ -119,8 +147,8 @@ def main():
         rg = ReleaseGenerator(gh_repo, gh_token)
 
         rg.generate([
-                        os.path.join(app_path, f"gtfs-{arguments['--id']}.zip"),
-                    ] + glob.glob(os.path.join(tmp_path, "*.json")))
+                        os.path.join(out_path, f"gtfs-{arguments['--id']}.zip"),
+                    ] + glob.glob(os.path.join(out_path, "*.json")))
     else:
         logger.warning("Skipping release generation since provided repo and tokens do no exist")
 

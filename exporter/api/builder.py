@@ -1,7 +1,7 @@
-from exporter.provider import ApiDataProvider
-from exporter.api.iasi import IasiApiDataProvider
 from exporter.api.bucharest import BucharestApiDataProvider
 from exporter.api.constanta import ConstantaApiDataProvider
+from exporter.api.iasi import IasiApiDataProvider
+from exporter.provider import ApiDataProvider
 
 
 class ProviderBuilder:

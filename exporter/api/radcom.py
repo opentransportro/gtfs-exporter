@@ -1,16 +1,19 @@
 import logging
 import time
+
 import polyline
 from gtfslib.dao import Dao
-from gtfslib.model import Agency, FeedInfo, Route, Trip, Stop, StopTime, Shape, ShapePoint, Calendar, CalendarDate
-from exporter.provider import ApiDataProvider
+from gtfslib.model import FeedInfo, Route, Trip, Stop, StopTime, Shape, ShapePoint, Calendar, CalendarDate
+
 from exporter.api.requests import RequestExecutor
+from exporter.provider import ApiDataProvider
 from exporter.util.http import Request
 from exporter.util.perf import measure_execution_time
 from exporter.util.spatial import DataNormalizer
-logger = logging.getLogger("gtfsexporter")
 
+logger = logging.getLogger("gtfsexporter")
 SLEEP_TIME = 0
+
 
 class RadcomApiDataProvider(ApiDataProvider):
     def __init__(self, url: str, feed_id="", lenient=False, disable_normalization=False, **kwargs):
@@ -40,24 +43,6 @@ class RadcomApiDataProvider(ApiDataProvider):
 
     def _load_agencies(self):
         pass
-        # self.agency_ids = set()
-        # logger.info("Importing agencies...")
-        #
-        # stb = Agency(self.feed_id, 1, "Regia Autonomă de Transport în Comun Constanța", "https://ctbus.ro",
-        #              "Europe/Bucharest", **{
-        #         "agency_lang": "ro",
-        #         "agency_email": "contact@ctbus.ro",
-        #         "agency_fare_url": "https://www.ctbus.ro/#Tarife",
-        #         "agency_phone": "0241694960"
-        #     })
-        #
-        # self.dao.add(stb)
-        # self.agency_ids.add(stb.agency_id)
-        #
-        # self.dao.flush()
-        # self.dao.commit()
-        # logger.info("Imported %d agencies" % 1)
-        # pass
 
     def __load_services(self):
         start_date = CalendarDate.fromYYYYMMDD("20200301")

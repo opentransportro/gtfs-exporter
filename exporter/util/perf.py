@@ -1,5 +1,8 @@
-import time
 import logging
+import os
+import subprocess
+import threading
+import time
 
 
 def measure_execution_time(method):
@@ -17,3 +20,49 @@ def measure_execution_time(method):
             return result
 
     return timed
+
+
+class LogPipe(threading.Thread):
+    def __init__(self, level, logger=None):
+        """Setup the object with a logger and a loglevel
+        and start the thread
+        """
+        if logger is None:
+            self.logger = logging.getLogger("gtfsexporter")
+        else:
+            self.logger = logger
+        threading.Thread.__init__(self)
+        self.daemon = False
+        self.level = level
+        self.fdRead, self.fdWrite = os.pipe()
+        self.pipeReader = os.fdopen(self.fdRead)
+        self.start()
+
+    def fileno(self):
+        """Return the write file descriptor of the pipe
+        """
+        return self.fdWrite
+
+    def run(self):
+        """Run the thread, logging everything.
+        """
+        for line in iter(self.pipeReader.readline, ''):
+            self.logger.log(self.level, line.strip('\n'))
+
+        self.pipeReader.close()
+
+    def close(self):
+        """Close the write end of the pipe.
+        """
+        os.close(self.fdWrite)
+
+def run_command(args: [], logger=None) -> bool:
+    logpipe = LogPipe(logging.INFO, logger)
+    # noinspection PyTypeChecker
+    with subprocess.Popen(args, stdout=logpipe, stderr=logpipe) as s:
+        s.wait()
+        logpipe.close()
+        logpipe.join()
+
+    return True
+

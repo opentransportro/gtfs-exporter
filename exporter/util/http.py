@@ -1,8 +1,10 @@
 import logging
 import time
+
 import requests
-from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
 from exporter.util.perf import measure_execution_time
 
 
@@ -17,7 +19,7 @@ class Request(object):
 
         retries = Retry(total=10,
                 backoff_factor=0.1,
-                status_forcelist=[400, 500, 502, 503, 504 ])
+                status_forcelist=[400, 500, 502, 503, 504])
 
         self.request_shared_session = requests.Session()
         self.request_shared_session.mount(url, HTTPAdapter(max_retries=retries))

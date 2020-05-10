@@ -1,11 +1,14 @@
 venv
 .idea
 tmp
+map
+out
 *.sqlite
 *.sqlite-journal
 *.zip
 *.bz2
 *.log*
-map
 **/__pycache__/*
+**/.DS_Store
+.DS_Store
 .DS_Store

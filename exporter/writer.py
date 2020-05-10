@@ -1,8 +1,8 @@
+import logging
 import os
 import zipfile
-import six
-import logging
 
+import six
 from gtfslib.model import Stop, Transfer, FareAttribute, FareRule
 from gtfslib.utils import fmttime, group_pairs
 from gtfsplugins.prettycsv import PrettyCsv
@@ -14,12 +14,18 @@ class Context(object):
     """The class given as execution context to a plugin.
     Propose helper methods to filter objects, or get the DAO."""
 
-    def __init__(self, dao, args):
+    def __init__(self, dao, args, out_path):
         self._dao = dao
         self.args = args
+        self._out_path = out_path
 
+    @property
     def dao(self):
         return self._dao
+
+    @property
+    def out_path(self):
+        return self._out_path
 
 
 class Writer(object):
@@ -42,11 +48,11 @@ class Writer(object):
         self.bundle = bundle
 
     def run(self, **kwargs):
-        with PrettyCsv("agency.txt",
+        with PrettyCsv(os.path.join(self.context.out_path,"agency.txt"),
                        ["agency_id", "agency_name", "agency_url", "agency_timezone", "agency_lang", "agency_phone",
                         "agency_fare_url", "agency_email"], **kwargs) as csvout:
             nagencies = 0
-            for agency in self.context.dao().agencies(fltr=self.context.args.filter):
+            for agency in self.context.dao.agencies(fltr=self.context.args.filter):
                 nagencies += 1
                 csvout.writerow([agency.agency_id, agency.agency_name, agency.agency_url, agency.agency_timezone,
                                  agency.agency_lang, agency.agency_phone, agency.agency_fare_url, agency.agency_email])
@@ -60,12 +66,12 @@ class Writer(object):
                              stop.zone_id, stop.stop_url, stop.location_type, stop.parent_station_id,
                              stop.stop_timezone, stop.wheelchair_boarding])
 
-        with PrettyCsv("stops.txt",
+        with PrettyCsv(os.path.join(self.context.out_path,"stops.txt"),
                        ["stop_id", "stop_code", "stop_name", "stop_desc", "stop_lat", "stop_lon", "zone_id", "stop_url",
                         "location_type", "parent_station", "stop_timezone", "wheelchair_boarding"], **kwargs) as csvout:
             nstops = 0
             station_ids = set()
-            for stop in self.context.dao().stops(fltr=self.context.args.filter, prefetch_parent=False,
+            for stop in self.context.dao.stops(fltr=self.context.args.filter, prefetch_parent=False,
                                                  prefetch_substops=False):
                 _output_stop(stop)
                 stop_ids.add((stop.feed_id, stop.stop_id))
@@ -77,7 +83,7 @@ class Writer(object):
             # Only export parent station that have not been already seen
             station_ids -= stop_ids
             for feed_id, st_ids in group_pairs(station_ids, 1000):
-                for station in self.context.dao().stops(fltr=(Stop.feed_id == feed_id) & (Stop.stop_id.in_(st_ids))):
+                for station in self.context.dao.stops(fltr=(Stop.feed_id == feed_id) & (Stop.stop_id.in_(st_ids))):
                     _output_stop(station)
                     if station.zone_id is not None:
                         zone_ids.add((station.feed_id, station.zone_id))
@@ -86,11 +92,11 @@ class Writer(object):
             stop_ids |= station_ids
 
         route_ids = set()
-        with PrettyCsv("routes.txt",
+        with PrettyCsv(os.path.join(self.context.out_path,"routes.txt"),
                        ["route_id", "agency_id", "route_short_name", "route_long_name", "route_desc", "route_type",
                         "route_url", "route_color", "route_text_color"], **kwargs) as csvout:
             nroutes = 0
-            for route in self.context.dao().routes(fltr=self.context.args.filter):
+            for route in self.context.dao.routes(fltr=self.context.args.filter):
                 nroutes += 1
                 csvout.writerow(
                     [route.route_id, route.agency_id, route.route_short_name, route.route_long_name, route.route_desc,
@@ -102,13 +108,13 @@ class Writer(object):
                               "pickup_type", "drop_off_type", "timepoint"]
         if not self.skip_shape_dist:
             stop_times_columns.append("shape_dist_traveled")
-        with PrettyCsv("trips.txt",
+        with PrettyCsv(os.path.join(self.context.out_path,"trips.txt"),
                        ["route_id", "service_id", "trip_id", "trip_headsign", "trip_short_name", "direction_id",
                         "block_id", "shape_id", "wheelchair_accessible", "bikes_allowed"], **kwargs) as csvout1:
-            with PrettyCsv("stop_times.txt", stop_times_columns, **kwargs) as csvout2:
+            with PrettyCsv(os.path.join(self.context.out_path,"stop_times.txt"), stop_times_columns, **kwargs) as csvout2:
                 ntrips = 0
                 nstoptimes = 0
-                for trip in self.context.dao().trips(fltr=self.context.args.filter, prefetch_stops=False,
+                for trip in self.context.dao.trips(fltr=self.context.args.filter, prefetch_stops=False,
                                                      prefetch_stop_times=True, prefetch_calendars=False,
                                                      prefetch_routes=False):
                     ntrips += 1
@@ -139,9 +145,9 @@ class Writer(object):
         # Note: GTFS' model does not have calendars objects to export,
         # since a calendar is renormalized/expanded to a list of dates.
 
-        with PrettyCsv("calendar_dates.txt", ["service_id", "date", "exception_type"], **kwargs) as csvout:
+        with PrettyCsv(os.path.join(self.context.out_path,"calendar_dates.txt"), ["service_id", "date", "exception_type"], **kwargs) as csvout:
             ncals = ndates = 0
-            for calendar in self.context.dao().calendars(fltr=self.context.args.filter, prefetch_dates=True):
+            for calendar in self.context.dao.calendars(fltr=self.context.args.filter, prefetch_dates=True):
                 ncals += 1
                 if ncals % 1000 == 0:
                     logger.info("%d calendars, %d dates..." % (ncals, ndates))
@@ -168,19 +174,19 @@ class Writer(object):
             nfarerules[0] += 1
             return True
 
-        with PrettyCsv("fare_rules.txt", ["fare_id", "route_id", "origin_id", "destination_id", "contains_id"],
+        with PrettyCsv(os.path.join(self.context.out_path,"fare_rules.txt"), ["fare_id", "route_id", "origin_id", "destination_id", "contains_id"],
                        **kwargs) as csvout:
             feed_ids = set()
             for feed_id, rt_ids in group_pairs(route_ids, 1000):
                 feed_ids.add(feed_id)
-                for farerule in self.context.dao().fare_rules(
+                for farerule in self.context.dao.fare_rules(
                         fltr=(FareRule.feed_id == feed_id) & FareRule.route_id.in_(rt_ids),
                         prefetch_fare_attributes=False):
                     if not _output_farerule(farerule):
                         continue
             for feed_id, zn_ids in group_pairs(zone_ids, 1000):
                 feed_ids.add(feed_id)
-                for farerule in self.context.dao().fare_rules(fltr=(FareRule.feed_id == feed_id) & (
+                for farerule in self.context.dao.fare_rules(fltr=(FareRule.feed_id == feed_id) & (
                         FareRule.origin_id.in_(zn_ids) | FareRule.contains_id.in_(zn_ids) | FareRule.destination_id.in_(
                         zn_ids)), prefetch_fare_attributes=False):
                     if not _output_farerule(farerule):
@@ -188,7 +194,7 @@ class Writer(object):
             # Special code to include all fare rules w/o any relationships
             # of any feed_id we've encountered so far
             for feed_id in feed_ids:
-                for farerule in self.context.dao().fare_rules(
+                for farerule in self.context.dao.fare_rules(
                         fltr=(FareRule.feed_id == feed_id) & (FareRule.route_id == None) & (
                                 FareRule.origin_id == None) & (FareRule.contains_id == None) & (
                                      FareRule.destination_id == None), prefetch_fare_attributes=False):
@@ -196,14 +202,14 @@ class Writer(object):
                         continue
             logger.info("Exported %d fare rules" % (nfarerules[0]))
         if nfarerules[0] == 0:
-            os.remove("fare_rules.txt")
+            os.remove(os.path.join(self.context.out_path,"fare_rules.txt"))
 
-        with PrettyCsv("fare_attributes.txt",
+        with PrettyCsv(os.path.join(self.context.out_path,"fare_attributes.txt"),
                        ["fare_id", "price", "currency_type", "payment_method", "transfers", "transfer_duration"],
                        **kwargs) as csvout:
             nfareattrs = 0
             for feed_id, fa_ids in group_pairs(fare_attr_ids, 1000):
-                for fareattr in self.context.dao().fare_attributes(
+                for fareattr in self.context.dao.fare_attributes(
                         fltr=(FareAttribute.feed_id == feed_id) & FareAttribute.fare_id.in_(fa_ids),
                         prefetch_fare_rules=False):
                     nfareattrs += 1
@@ -211,14 +217,14 @@ class Writer(object):
                                      fareattr.transfers, fareattr.transfer_duration])
             logger.info("Exported %d fare attributes" % (nfareattrs))
         if nfareattrs == 0:
-            os.remove("fare_attributes.txt")
+            os.remove(os.path.join(self.context.out_path,"fare_attributes.txt"))
 
         shapes_columns = ["shape_id", "shape_pt_lat", "shape_pt_lon", "shape_pt_sequence"]
         if not self.skip_shape_dist:
             shapes_columns.append("shape_dist_traveled")
         with PrettyCsv("shapes.txt", shapes_columns, **kwargs) as csvout:
             nshapes = nshapepoints = 0
-            for shape in self.context.dao().shapes(fltr=self.context.args.filter, prefetch_points=True):
+            for shape in self.context.dao.shapes(fltr=self.context.args.filter, prefetch_points=True):
                 nshapes += 1
                 if nshapes % 100 == 0:
                     logger.info("%d shapes, %d points..." % (nshapes, nshapepoints))
@@ -230,16 +236,16 @@ class Writer(object):
                     csvout.writerow(row)
             logger.info("Exported %d shapes with %d points" % (nshapes, nshapepoints))
         if nshapes == 0:
-            os.remove("shapes.txt")
+            os.remove(os.path.join(self.context.out_path,"shapes.txt"))
 
-        with PrettyCsv("transfers.txt", ["from_stop_id", "to_stop_id", "transfer_type", "min_transfer_time"],
+        with PrettyCsv(os.path.join(self.context.out_path,"transfers.txt"), ["from_stop_id", "to_stop_id", "transfer_type", "min_transfer_time"],
                        **kwargs) as csvout:
             ntransfers = 0
             transfer_ids = set()
             for feed_id, st_ids in group_pairs(stop_ids, 1000):
                 # Note: we can't use a & operator below instead of |,
                 # as we would need to have *all* IDs in one batch.
-                for transfer in self.context.dao().transfers(fltr=(Transfer.feed_id == feed_id) & (
+                for transfer in self.context.dao.transfers(fltr=(Transfer.feed_id == feed_id) & (
                         Transfer.from_stop_id.in_(st_ids) | Transfer.to_stop_id.in_(st_ids)), prefetch_stops=False):
                     # As we used from_stop_id.in(...) OR to_stop_id.in(...),
                     # we need to filter out the potential superfluous results.
@@ -257,18 +263,8 @@ class Writer(object):
                                      transfer.min_transfer_time])
             logger.info("Exported %d transfers" % (ntransfers))
         if ntransfers == 0:
-            os.remove("transfers.txt")
+            os.remove(os.path.join(self.context.out_path,"transfers.txt"))
 
         if self.bundle:
-            if not isinstance(self.bundle, six.string_types):
-                # Allow the use of "--bundle" option only
-                self.bundle = "gtfs.zip"
-            if not self.bundle.endswith('.zip'):
-                self.bundle = self.bundle + '.zip'
-            logger.info("Zipping result to %s (removing .txt files)" % (self.bundle))
-            with zipfile.ZipFile(self.bundle, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                for f in ["agency.txt", "stops.txt", "routes.txt", "trips.txt", "stop_times.txt", "calendar_dates.txt",
-                          "fare_rules.txt", "fare_attributes.txt", "shapes.txt", "transfers.txt"]:
-                    if os.path.isfile(f):
-                        zipf.write(f)
-                        os.remove(f)
+            from exporter.util.storage import generate_gtfs_bundle
+            generate_gtfs_bundle(self.context.out_path, bundle=self.bundle)

@@ -22,7 +22,6 @@ setup(
         'Intended Audience :: Developers',
         'Topic :: Scientific/Engineering :: GIS',
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
-        'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 3'
     ],
     keywords='GTFS transit exporter',

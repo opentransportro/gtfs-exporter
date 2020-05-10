@@ -1,8 +1,15 @@
 import logging
+import os
+import shutil
 
 from gtfslib.model import Trip, Shape
 from gtfslib.spatial import orthodromic_distance, orthodromic_seg_distance, DistanceCache
 from gtfslib.utils import ContinousPiecewiseLinearFunc
+
+from exporter import __map_path__, __temp_path__
+from exporter.util.csv import remove_column
+from exporter.util.perf import run_command
+from exporter.util.storage import file_age_in_seconds
 
 logger = logging.getLogger("gtfsexporter")
 
@@ -242,3 +249,71 @@ class DataNormalizer:
                 self.__dao.flush()
         self.__dao.flush()
         logger.info("Normalized %d trips and %d shapes" % (ntrips, nshapes))
+
+
+class ShapeGenerator(object):
+    def __init__(self, map_source: str, gtfs_source: str):
+        # https://download.geofabrik.de/europe/romania-latest.osm.bz2
+        self.map_source = map_source
+        self.gtfs_source = gtfs_source
+
+    def generate(self):
+        logger.info("searching for pfaedle support for generating shapes")
+        if shutil.which('pfaedle') is None:
+            logger.error("no support for generating shapes, pfaedle not found. Please clone from "
+                         "https://github.com/opentransportro/pfaedle")
+            # need to clone and build repo since this tool is needed for generating shapes
+            return
+
+        # download maps
+        logger.info("Checking if downloading maps is required.")
+        map_file = os.path.join(__map_path__, "map.osm")
+        map_archive = os.path.join(__map_path__, "map.osm.bz2")
+
+        if not os.path.exists(map_file) or file_age_in_seconds(map_file) > 604800:
+            if os.path.exists(map_file) and file_age_in_seconds(map_file) > 604800:
+                logger.warning("Map file to old removing and fetching new one!")
+                os.remove(map_file)
+
+            if not os.path.exists(map_archive) or file_age_in_seconds(map_archive) > 604800:
+                logger.info(f"downloading from {self.map_source}")
+                import requests
+                file = requests.get(self.map_source, stream=True)
+
+                with open(map_archive, "wb") as exported_file:
+                    total_length = int(file.headers.get('content-length'))
+                    from clint.textui import progress
+                    for ch in progress.bar(file.iter_content(chunk_size=2391975),
+                                           expected_size=(total_length / 1024) + 1):
+                        if ch:
+                            exported_file.write(ch)
+
+            logger.info("expanding map file")
+
+            import bz2
+            with open(map_file, 'wb') as output:
+                with bz2.BZ2File(map_archive, 'rb') as input:
+                    shutil.copyfileobj(input, output)
+
+            # cleanup the archive as we dont use it
+            os.remove(map_archive)
+
+        # removing not valid shape references
+        self._remove_old_shape_references()
+
+        logger.info("generating shapes")
+        run_command(['pfaedle', '-D', '--inplace',
+                     f'-d{self.gtfs_source}',
+                     '-o' + self.gtfs_source,
+                     '--write-trgraph', '--write-graph', '--write-cgraph',
+                     '-mall',
+                     '-x' + map_file, self.gtfs_source],
+                    logger)
+
+    def _remove_old_shape_references(self):
+        shape_file = os.path.join(self.gtfs_source, "shapes.txt")
+        if os.path.exists(shape_file):
+            os.remove(shape_file)
+
+        # removing not valid shape references
+        remove_column(os.path.join(self.gtfs_source, "trips.txt"), "shape_id")
