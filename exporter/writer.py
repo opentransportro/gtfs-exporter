@@ -222,7 +222,7 @@ class Writer(object):
         shapes_columns = ["shape_id", "shape_pt_lat", "shape_pt_lon", "shape_pt_sequence"]
         if not self.skip_shape_dist:
             shapes_columns.append("shape_dist_traveled")
-        with PrettyCsv("shapes.txt", shapes_columns, **kwargs) as csvout:
+        with PrettyCsv(os.path.join(self.context.out_path, "shapes.txt"), shapes_columns, **kwargs) as csvout:
             nshapes = nshapepoints = 0
             for shape in self.context.dao.shapes(fltr=self.context.args.filter, prefetch_points=True):
                 nshapes += 1
