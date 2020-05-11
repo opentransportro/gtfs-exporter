@@ -144,7 +144,7 @@ class RadcomApiDataProvider(ApiDataProvider):
                     continue
 
             st = StopTime(self.feed_id, t.trip_id, s.stop_id, stop_index, schedule_time, schedule_time, 0, **{
-                "stop_headsign": "00000"
+                # "stop_headsign": "00000"
             })
             t.stop_times.append(st)
             # stop_times_dao.append(st)
