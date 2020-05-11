@@ -15,11 +15,11 @@ class ReleaseGenerator(object):
         g = Github(self.token)
         repo = g.get_repo(self.repo)
 
-        self.__delete_release("latest", repo)
         self.__delete_release(str(date.today()), repo)
+        self.__delete_release("latest", repo)
 
-        self.__make_release("latest", repo, files)
         self.__make_release(str(date.today()), repo, files)
+        self.__make_release("latest", repo, files)
 
     @staticmethod
     def __make_release(name: str, repo, files):
