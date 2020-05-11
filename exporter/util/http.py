@@ -2,6 +2,7 @@ import logging
 import time
 
 import requests
+from ratelimit import limits, sleep_and_retry
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -28,9 +29,11 @@ class Request(object):
     def url(self):
         return self._url
 
-    # This construct allows objects to be called as functions in python
-    @measure_execution_time
+    @sleep_and_retry
+    @limits(calls=20, period=1)
     def __call__(self, *args):
+        # api call rate limiting to 20 requests / 1 second => 1 request / 50 msec
+        # --- average response time observed was ~35 msec
         request_url = self._url.format(*args)
 
         ts = time.time()
