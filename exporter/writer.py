@@ -136,7 +136,7 @@ class Writer(object):
                                stoptime.stop_headsign,
                                stoptime.pickup_type,
                                stoptime.drop_off_type,
-                               stoptime.timepoint]
+                               stoptime.timepoint if (stoptime.arrival_time is not None or stoptime.departure_time is not None) else 0]
                         if not self.skip_shape_dist:
                             row.append(stoptime.shape_dist_traveled)
                         csvout2.writerow(row)
