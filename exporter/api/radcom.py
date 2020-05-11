@@ -5,7 +5,6 @@ import polyline
 from gtfslib.dao import Dao
 from gtfslib.model import FeedInfo, Route, Trip, Stop, StopTime, Shape, ShapePoint, Calendar, CalendarDate
 
-from exporter.api.requests import RequestExecutor
 from exporter.provider import ApiDataProvider
 from exporter.util.http import Request
 from exporter.util.perf import measure_execution_time
@@ -20,7 +19,6 @@ class RadcomApiDataProvider(ApiDataProvider):
         super().__init__(feed_id, lenient, disable_normalization)
         # Optional, generate empty feed info
         self.feedinfo = FeedInfo(self.feed_id)
-        self.request_executor = RequestExecutor()
 
         self.line_request = Request(url + "/lines/")
         self.line_detail_request = Request(url + "/lines/{0}/direction/{1}")
