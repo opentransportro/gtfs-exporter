@@ -121,6 +121,10 @@ def main():
     #  - generate initial gtfs files
     #  - generate shapes for gtfs
     #  - generate bundle
+    # for zip, url
+    #  - generation of shapes
+    #  - load all the feed to process & interpolate
+    #  - generate feed (bundle)
     if provider.is_from_api():
         exporter.load(provider)
         exporter.process()
@@ -129,11 +133,6 @@ def main():
         sg.generate()
         from exporter.util.storage import generate_gtfs_bundle
         generate_gtfs_bundle(out_path, bundle=f"gtfs-{arguments['--id']}.zip")
-
-    # for zip, url
-    #  - generation of shapes
-    #  - load all the feed to process & interpolate
-    #  - generate feed (bundle)
     else:
         sg.generate()
         exporter.load(provider)
