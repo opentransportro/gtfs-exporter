@@ -1,26 +1,28 @@
+import os
 from zipfile import ZipFile
 
-import requests
-import os
-import exporter
 import pandas as pd
-from gtfslib.dao import Dao, transactional
+import requests
 from gtfslib.csvgtfs import Gtfs
+from gtfslib.dao import Dao, transactional
+
+import exporter
 
 
 class FolderSource(object):
-    def __init__(self, input_file):
+    def __init__(self, input_file, output_path):
+        self.output_path = output_path
         if os.path.exists(input_file):
             with ZipFile(input_file, "r") as zip_ref:
-                zip_ref.extractall(exporter.__temp_path__)
+                zip_ref.extractall(output_path)
 
         # change route type from 5 or 11 to 3 since other are not supported by opentripplanner
-        r = pd.read_csv(os.path.join(exporter.__temp_path__, "routes.txt"))
+        r = pd.read_csv(os.path.join(output_path, "routes.txt"))
         r.loc[r.route_type.isin([5, 11]), 'route_type'] = 3
-        r.to_csv(os.path.join(exporter.__temp_path__, "routes.txt"), index=False, sep=',')
+        r.to_csv(os.path.join(output_path, "routes.txt"), index=False, sep=',')
 
     def open(self, filename, mode='rU'):
-        f = os.path.join(exporter.__temp_path__, filename)
+        f = os.path.join(self.output_path, filename)
         if os.path.exists(f):
             return open(f, mode + "b")
 
@@ -52,12 +54,15 @@ class DataProvider:
     def disable_normalization(self):
         return self._disable_normalization
 
+    def is_from_api(self) -> bool:
+        return False
+
 
 class FileDataProvider(DataProvider):
     def __init__(self, path: str, feed_id="", lenient=False, disable_normalization=False, **kwargs):
         super().__init__(feed_id, lenient, disable_normalization, **kwargs)
         self._path = path
-        self._folder_source = FolderSource(self.path)
+        self._folder_source = FolderSource(self.path, output_path=exporter.__output_path__)
 
     def load_data_source(self, dao: Dao) -> bool:
         @transactional(dao.session())
@@ -100,4 +105,5 @@ class HttpDataProvider(FileDataProvider):
 
 
 class ApiDataProvider(DataProvider):
-    pass
+    def is_from_api(self) -> bool:
+        return True

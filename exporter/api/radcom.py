@@ -1,16 +1,16 @@
 import logging
 import time
+
 import polyline
 from gtfslib.dao import Dao
-from gtfslib.model import Agency, FeedInfo, Route, Trip, Stop, StopTime, Shape, ShapePoint, Calendar, CalendarDate
+from gtfslib.model import FeedInfo, Route, Trip, Stop, StopTime, Shape, ShapePoint, Calendar, CalendarDate
+
 from exporter.provider import ApiDataProvider
-from exporter.api.requests import RequestExecutor
 from exporter.util.http import Request
 from exporter.util.perf import measure_execution_time
 from exporter.util.spatial import DataNormalizer
 
 logger = logging.getLogger("gtfsexporter")
-
 SLEEP_TIME = 0
 
 
@@ -19,7 +19,6 @@ class RadcomApiDataProvider(ApiDataProvider):
         super().__init__(feed_id, lenient, disable_normalization)
         # Optional, generate empty feed info
         self.feedinfo = FeedInfo(self.feed_id)
-        self.request_executor = RequestExecutor()
 
         self.line_request = Request(url + "/lines/")
         self.line_detail_request = Request(url + "/lines/{0}/direction/{1}")
@@ -42,24 +41,6 @@ class RadcomApiDataProvider(ApiDataProvider):
 
     def _load_agencies(self):
         pass
-        # self.agency_ids = set()
-        # logger.info("Importing agencies...")
-        #
-        # stb = Agency(self.feed_id, 1, "Regia Autonomă de Transport în Comun Constanța", "https://ctbus.ro",
-        #              "Europe/Bucharest", **{
-        #         "agency_lang": "ro",
-        #         "agency_email": "contact@ctbus.ro",
-        #         "agency_fare_url": "https://www.ctbus.ro/#Tarife",
-        #         "agency_phone": "0241694960"
-        #     })
-        #
-        # self.dao.add(stb)
-        # self.agency_ids.add(stb.agency_id)
-        #
-        # self.dao.flush()
-        # self.dao.commit()
-        # logger.info("Imported %d agencies" % 1)
-        # pass
 
     def __load_services(self):
         start_date = CalendarDate.fromYYYYMMDD("20200301")
@@ -79,8 +60,8 @@ class RadcomApiDataProvider(ApiDataProvider):
             self.dao.add(service)
             self.dao.bulk_save_objects(dates)
 
-        save_calendar_for("LV", [1, 1, 1, 1, 1, 0, 0])
-        save_calendar_for("SD", [0, 0, 0, 0, 0, 1, 1])
+        save_calendar_for("LV", [1,1,1,1,1,0,0])
+        save_calendar_for("SD", [0,0,0,0,0,1,1])
 
     def __load_routes(self):
         stops = set()
@@ -112,8 +93,7 @@ class RadcomApiDataProvider(ApiDataProvider):
                 self.dao.add(shp)
                 dao_shape_pts = []
                 for shp_point_index, shape_point in enumerate(shape_points):
-                    shp_point = ShapePoint(self.feed_id, shp.shape_id, shp_point_index, shape_point[0], shape_point[1],
-                                           -999999)
+                    shp_point = ShapePoint(self.feed_id, shp.shape_id, shp_point_index, shape_point[0], shape_point[1], -999999)
                     dao_shape_pts.append(shp_point)
                 self.dao.bulk_save_objects(dao_shape_pts)
 
@@ -130,6 +110,7 @@ class RadcomApiDataProvider(ApiDataProvider):
                     result = self.process_route_stop(r, s, shp, direction, stop_index, trips)
 
             self.dao.flush()
+
 
     def process_route_stop(self, r: Route, s: Stop, shp: Shape, direction, stop_index, trips):
         # executing request
@@ -163,7 +144,7 @@ class RadcomApiDataProvider(ApiDataProvider):
                     continue
 
             st = StopTime(self.feed_id, t.trip_id, s.stop_id, stop_index, schedule_time, schedule_time, 0, **{
-                "stop_headsign": "00000"
+                # "stop_headsign": "00000"
             })
             t.stop_times.append(st)
             # stop_times_dao.append(st)
@@ -181,7 +162,8 @@ class RadcomApiDataProvider(ApiDataProvider):
                 stoptimes.append(schedule_time)
         stoptimes.sort()
 
-        return list(dict.fromkeys(stoptimes))
+        return  list(dict.fromkeys(stoptimes))
+
 
     @staticmethod
     def __parse_route_type(type: str):

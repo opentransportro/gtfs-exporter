@@ -1,13 +1,7 @@
 import queue
-
-from concurrent.futures import ThreadPoolExecutor
-import logging
-import random
-import time
-import queue
-
-import requests
 import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 
 NTHREADS = 8
 DELAY_SECONDS = 0.5

@@ -1,5 +1,7 @@
 import logging
+
 from gtfslib.model import Agency
+
 from exporter.api.radcom import RadcomApiDataProvider
 
 logger = logging.getLogger("gtfsexporter")
@@ -20,14 +22,14 @@ class BucharestApiDataProvider(RadcomApiDataProvider):
         self.agency_ids = set()
         logger.info("Importing agencies...")
 
-        stb = Agency(self.feed_id, 1, "STB SA", "https://stbsa.ro,Europe/Bucharest", "Europe/Bucharest", **{
+        stb = Agency(self.feed_id, 1, "STB SA", "https://stbsa.ro", "Europe/Bucharest", **{
             "agency_lang": "ro",
             "agency_email": "contact@stbsa.ro",
             "agency_fare_url": "http://stbsa.ro/portofel_electronic.php",
             "agency_phone": "0213110595"
         })
 
-        metrorex = Agency(self.feed_id, 2, "METROREX SA", "https://metrorex.ro,Europe/Bucharest", "Europe/Bucharest",
+        metrorex = Agency(self.feed_id, 2, "METROREX SA", "https://metrorex.ro", "Europe/Bucharest",
                           **{
                               "agency_lang": "ro",
                               "agency_email": "contact@metrorex.ro",
