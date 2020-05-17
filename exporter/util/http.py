@@ -6,12 +6,13 @@ from ratelimit import limits, sleep_and_retry
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from exporter.util.perf import measure_execution_time
-
 
 class Request(object):
-    def __init__(self, url: str, logger=None):
+    def __init__(self, url: str, headers=None, logger=None):
+        if headers is None:
+            headers = {}
         self._url = url
+        self.headers = headers
         self.encoding = 'utf-8'
         if logger is None:
             self.logger = logging.getLogger("gtfsexporter")
@@ -44,7 +45,7 @@ class Request(object):
     @limits(calls=20, period=1)
     def __safe_request(self, request_url):
         try:
-            response = self.request_shared_session.get(request_url, headers={'Content-Type': 'application/json'})
+            response = self.request_shared_session.get(request_url, headers=self.headers)
         except:
             response = self.__safe_request(request_url=request_url)
 
