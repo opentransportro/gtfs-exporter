@@ -60,8 +60,8 @@ class RadcomApiDataProvider(ApiDataProvider):
             self.dao.add(service)
             self.dao.bulk_save_objects(dates)
 
-        save_calendar_for("LV", [1,1,1,1,1,0,0])
-        save_calendar_for("SD", [0,0,0,0,0,1,1])
+        save_calendar_for("LV", [1, 1, 1, 1, 1, 0, 0])
+        save_calendar_for("SD", [0, 0, 0, 0, 0, 1, 1])
 
     def __load_routes(self):
         stops = set()
@@ -93,7 +93,8 @@ class RadcomApiDataProvider(ApiDataProvider):
                 self.dao.add(shp)
                 dao_shape_pts = []
                 for shp_point_index, shape_point in enumerate(shape_points):
-                    shp_point = ShapePoint(self.feed_id, shp.shape_id, shp_point_index, shape_point[0], shape_point[1], -999999)
+                    shp_point = ShapePoint(self.feed_id, shp.shape_id, shp_point_index, shape_point[0], shape_point[1],
+                                           -999999)
                     dao_shape_pts.append(shp_point)
                 self.dao.bulk_save_objects(dao_shape_pts)
 
@@ -110,7 +111,6 @@ class RadcomApiDataProvider(ApiDataProvider):
                     result = self.process_route_stop(r, s, shp, direction, stop_index, trips)
 
             self.dao.flush()
-
 
     def process_route_stop(self, r: Route, s: Stop, shp: Shape, direction, stop_index, trips):
         # executing request
@@ -162,8 +162,7 @@ class RadcomApiDataProvider(ApiDataProvider):
                 stoptimes.append(schedule_time)
         stoptimes.sort()
 
-        return  list(dict.fromkeys(stoptimes))
-
+        return list(dict.fromkeys(stoptimes))
 
     @staticmethod
     def __parse_route_type(type: str):
