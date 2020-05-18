@@ -1,8 +1,9 @@
 import csv
 import logging
 
+import datetime as datetime
 from gtfslib.dao import Dao
-from gtfslib.model import Agency, FeedInfo, Calendar, CalendarDate, Route, Shape, ShapePoint, Stop
+from gtfslib.model import Agency, FeedInfo, Calendar, CalendarDate, Route, Shape, ShapePoint, Stop, Trip, StopTime
 
 from exporter.api.requests import RequestExecutor
 from exporter.provider import ApiDataProvider
@@ -97,7 +98,9 @@ class ClujApiDataProvider(ApiDataProvider):
                 logger.info(f"Total lines to process \t\t\t{line_total}")
                 for line_idx, line in enumerate(line_data):
                     logger.info(f"\tprocessing line {line['routeShortname']} \t\t\t [{line_idx}/{line_total}]")
-                    route = Route(self.feed_id, line['_id'], self.ctp_cluj.agency_id,
+                    route = Route(self.feed_id,
+                                  str(line['routeId']),
+                                  self.ctp_cluj.agency_id,
                                   self.__parse_route_type(line['routeType']), **{
                             "route_color": line['routeColor'],
                             "route_text_color": "000000",
@@ -105,46 +108,107 @@ class ClujApiDataProvider(ApiDataProvider):
                         })
                     route.route_long_name = line['routeName']
 
-                    self.dao.add(route)
+                    is_route_supported = self.__process_route(route, line['routeWayCoordinates'],
+                                                              line['routeRoundWayCoordinates'],
+                                                              line['routeWaypoints'], line['routeRoundWaypoints'])
 
-                    self.__process_route(route, line['routeWayCoordinates'], line['routeRoundWayCoordinates'],
-                                         line['routeWaypoints'], line['routeRoundWaypoints'])
+                    if is_route_supported:
+                        self.dao.add(route)
 
     def __process_route(self, route, wayCoordinates, roundWayCoordinates, waypoints, roundWaypoints):
         logger.debug(f" - processing trips for {route.name()}")
 
-        self.__process_shape(route, 0, wayCoordinates)
-        self.__process_shape(route, 1, roundWayCoordinates)
+        shape_in = self.__process_shape(route, 0, wayCoordinates)
+        shape_out = self.__process_shape(route, 1, roundWayCoordinates)
+
+        is_route_supported = True
 
         for service_id in self.service_ids:
             in_times, out_times = self.__load_timetables(route, service_id)
 
             if len(in_times) > 0:
                 # process individually each direction instance
-                self.__process_trip(waypoints, in_times)
-                self.__process_trip(roundWaypoints, out_times)
+                self.__process_trips(route, shape_in, 0, waypoints, in_times, service_id)
+                self.__process_trips(route, shape_out, 1, roundWaypoints, out_times, service_id)
+                is_route_supported = True
+
+        return is_route_supported
+
+    def __process_trips(self, route, shape, direction, waypoints, timepoints, service_id):
+        logger.debug(f"total stops to process {len(waypoints)}")
+
+        for timepoint_idx, timepoint in enumerate(timepoints):
+            trip_id = f"{route.agency_id}_{route.route_id}_{direction}_{service_id}_{timepoint_idx}"
+
+            trip = Trip(self.feed_id,
+                        trip_id,
+                        route.route_id,
+                        service_id,
+                        **{"trip_short_name": waypoints[0]['name'] + '-' + waypoints[-1]['name'],
+                           "trip_headsign": waypoints[-1]['name'],
+                           "direction_id": direction,
+                           "shape_id": shape.shape_id
+                           }
+                        )
+
+            self.dao.add(trip)
+
+            for waypoint_idx, waypoint in enumerate(waypoints):
+                if waypoint['name']:
+                    stop = Stop(self.feed_id,
+                                str(waypoint['stationID']),
+                                waypoint['name'],
+                                waypoint['lat'],
+                                waypoint['lng'])
+                    if stop.stop_id not in self.stops:
+                        self.stops.add(stop.stop_id)
+                        self.dao.add(stop)
+
+                    if waypoint_idx == 0:
+                        departure_time = self.__convert_tsm(timepoint)
+                        stop_time = StopTime(self.feed_id, trip.trip_id, stop.stop_id,
+                                             0,
+                                             departure_time, departure_time,
+                                             int(waypoint['total']),
+                                             0)
+                        first_departure_time = departure_time
+                    elif waypoint_idx == (len(waypoints) - 1):
+                        delta_time = self.__process_time_for_distance(waypoint['total'])
+                        end_time = int(delta_time + first_departure_time)
+                        stop_time = StopTime(self.feed_id, trip.trip_id, stop.stop_id,
+                                             waypoint_idx,
+                                             end_time, end_time,
+                                             int(waypoint['total']),
+                                             0)
+                    else:
+                        stop_time = StopTime(self.feed_id, trip.trip_id, stop.stop_id,
+                                             waypoint_idx,
+                                             0, 0,
+                                             int(waypoint['total']),
+                                             1)
+                    trip.stop_times.append(stop_time)
+
+    def __process_time_for_distance(self, distance) -> int:
+        # 15 km / h = 15000 m / 3600 s = 4.1 m / s
+        average_speed = 4.1
+        return int(distance / average_speed)
 
     def __process_shape(self, route, direction, coordinates):
         logger.debug("processing shape")
-        shp = Shape(route.feed_id, f"shp{route.agency_id}_{route.route_id}_{direction}")
+        shp = Shape(route.feed_id, f"shp_{route.agency_id}_{route.route_id}_{direction}")
         self.dao.add(shp)
         dao_shape_pts = []
         for shp_point_index, shape_point in enumerate(coordinates):
-            shp_point = ShapePoint(route.feed_id, shp.shape_id, shp_point_index, shape_point['lat'],
+            shp_point = ShapePoint(route.feed_id,
+                                   shp.shape_id,
+                                   shp_point_index,
+                                   shape_point['lat'],
                                    shape_point['lng'],
                                    -999999)
             dao_shape_pts.append(shp_point)
         self.dao.bulk_save_objects(dao_shape_pts)
 
-    def __process_trip(self, waypoints, times):
-        logger.debug(f"total stops to process {len(waypoints)}")
-        for stop_index, stop in enumerate(waypoints):
-            logger.debug(f" - processing stop {stop_index + 1} of {len(waypoints)}")
-            if stop['name']:
-                s = Stop(self.feed_id, str(stop['stationID']), stop['name'], stop['lat'], stop['lng'])
-                if s.stop_id not in self.stops:
-                    self.stops.add(s.stop_id)
-                    self.dao.add(s)
+        return shp
 
     @staticmethod
     def __load_timetables(route: Route, service_id):
@@ -165,20 +229,24 @@ class ClujApiDataProvider(ApiDataProvider):
 
             for csv_line in range(5, len(csv_lines)):
                 if len(csv_lines[csv_line]) > 0:
-                    in_times.append(csv_lines[csv_line][0])
-                    out_times.append(csv_lines[csv_line][1])
+                    in_times.append(csv_lines[csv_line][0].strip())
+                    out_times.append(csv_lines[csv_line][1].strip())
 
-            print(in_times)
-
-        return in_times, out_times
+        return [x for x in in_times if x], [x for x in out_times if x]
 
     @staticmethod
     def __parse_route_type(type: str):
         switcher = {
             '1': Route.TYPE_BUS,
-            '2': Route.TYPE_SUBWAY,
-            '3': Route.TYPE_TRAM,
-            '4': Route.TYPE_CABLECAR,
+            '2': Route.TYPE_TRAM,
+            '3': Route.TYPE_CABLECAR,
+            '4': Route.TYPE_SUBWAY,
         }
 
         return switcher.get(type)
+
+    @staticmethod
+    def __convert_tsm(time) -> int:
+        date = datetime.datetime.strptime(time, '%H:%M')  # for example
+        return int(datetime.timedelta(hours=date.hour, minutes=date.minute,
+                                      seconds=date.second).total_seconds())
