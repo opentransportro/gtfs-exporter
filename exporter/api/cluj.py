@@ -61,10 +61,14 @@ class ClujApiDataProvider(ApiDataProvider):
         pass
 
     def __load_services(self):
-        start_date = CalendarDate.fromYYYYMMDD("20200301")
+        self.service_ids = set()
+
+        start_date = CalendarDate.fromYYYYMMDD("20200501")
         end_date = CalendarDate.fromYYYYMMDD("20201231")
 
         def save_calendar_for(service_id: str, dow: []):
+            self.service_ids.add(service_id)
+
             service = Calendar(self.feed_id, service_id)
             dates = []
             for d in CalendarDate.range(start_date, end_date.next_day()):
@@ -93,42 +97,34 @@ class ClujApiDataProvider(ApiDataProvider):
                 logger.info(f"Total lines to process \t\t\t{line_total}")
                 for line_idx, line in enumerate(line_data):
                     logger.info(f"\tprocessing line {line['routeShortname']} \t\t\t [{line_idx}/{line_total}]")
-                    r = Route(self.feed_id, line['_id'], self.ctp_cluj.agency_id,
-                              self.__parse_route_type(line['routeType']), **{
+                    route = Route(self.feed_id, line['_id'], self.ctp_cluj.agency_id,
+                                  self.__parse_route_type(line['routeType']), **{
                             "route_color": line['routeColor'],
                             "route_text_color": "000000",
                             "route_short_name": line['routeShortname']
                         })
-                    r.route_long_name = line['routeName']
+                    route.route_long_name = line['routeName']
 
-                    self.__process_route(r, line['routeWayCoordinates'], line['routeRoundWayCoordinates'],
+                    self.dao.add(route)
+
+                    self.__process_route(route, line['routeWayCoordinates'], line['routeRoundWayCoordinates'],
                                          line['routeWaypoints'], line['routeRoundWaypoints'])
 
     def __process_route(self, route, wayCoordinates, roundWayCoordinates, waypoints, roundWaypoints):
         logger.debug(f" - processing trips for {route.name()}")
 
-        response_lv = requests.get(f"http://www.ctpcj.ro/orare/csv/orar_{route.name()}_lv.csv",
-                                headers={'Referer': 'http://www.ctpcj.ro'})
+        self.__process_shape(route, 0, wayCoordinates)
+        self.__process_shape(route, 1, roundWayCoordinates)
 
-        response_s = requests.get(f"http://www.ctpcj.ro/orare/csv/orar_{route.name()}_s.csv",
-                                   headers={'Referer': 'http://www.ctpcj.ro'})
+        for service_id in self.service_ids:
+            in_times, out_times = self.__load_timetables(route, service_id)
 
-        response_d = requests.get(f"http://www.ctpcj.ro/orare/csv/orar_{route.name()}_d.csv",
-                                  headers={'Referer': 'http://www.ctpcj.ro'})
+            if len(in_times) > 0:
+                # process individually each direction instance
+                self.__process_trip(waypoints, in_times)
+                self.__process_trip(roundWaypoints, out_times)
 
-        if response_lv.status_code == 200:
-            decoded_content = response_lv.content.decode('utf-8')
-
-            cr = csv.reader(decoded_content.splitlines(), delimiter=',')
-            my_list = list(cr)
-            print(my_list)
-
-            self.dao.add(route)
-
-            self.__load_trip(route=route, direction=0, coordinates=wayCoordinates, waypoints=waypoints)
-            self.__load_trip(route=route, direction=1, coordinates=roundWayCoordinates, waypoints=roundWaypoints)
-
-    def __load_trip(self, route, direction, coordinates, waypoints):
+    def __process_shape(self, route, direction, coordinates):
         logger.debug("processing shape")
         shp = Shape(route.feed_id, f"shp{route.agency_id}_{route.route_id}_{direction}")
         self.dao.add(shp)
@@ -140,21 +136,41 @@ class ClujApiDataProvider(ApiDataProvider):
             dao_shape_pts.append(shp_point)
         self.dao.bulk_save_objects(dao_shape_pts)
 
-        trips = []
-
+    def __process_trip(self, waypoints, times):
         logger.debug(f"total stops to process {len(waypoints)}")
         for stop_index, stop in enumerate(waypoints):
             logger.debug(f" - processing stop {stop_index + 1} of {len(waypoints)}")
-            s = Stop(self.feed_id, stop['_id'], stop['name'], stop['lat'], stop['lng'])
-            if s.stop_id not in self.stops:
-                self.stops.add(s.stop_id)
-                self.dao.add(s)
+            if stop['name']:
+                s = Stop(self.feed_id, str(stop['stationID']), stop['name'], stop['lat'], stop['lng'])
+                if s.stop_id not in self.stops:
+                    self.stops.add(s.stop_id)
+                    self.dao.add(s)
 
-        self.process_route_trips(route, shp, direction, trips, 'lv')
+    @staticmethod
+    def __load_timetables(route: Route, service_id):
+        # TODO: move HTTP business
+        response = requests.get(f"http://www.ctpcj.ro/orare/csv/orar_{route.name()}_{service_id}.csv",
+                                headers={'Referer': 'http://www.ctpcj.ro'})
 
-    def process_route_trips(self, r: Route, shape, direction, trips, service_id):
+        in_times = []
+        out_times = []
+        if response.status_code == 200:
+            decoded_content = response.content.decode('utf-8')
 
-        return True
+            timetable_cr = csv.reader(decoded_content.splitlines(), delimiter=',')
+            csv_lines = list(timetable_cr)
+
+            if len(csv_lines) <= 5:
+                return [], []
+
+            for csv_line in range(5, len(csv_lines)):
+                if len(csv_lines[csv_line]) > 0:
+                    in_times.append(csv_lines[csv_line][0])
+                    out_times.append(csv_lines[csv_line][1])
+
+            print(in_times)
+
+        return in_times, out_times
 
     @staticmethod
     def __parse_route_type(type: str):
