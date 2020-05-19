@@ -179,17 +179,17 @@ class ClujApiDataProvider(ApiDataProvider):
                                      shape_dist_traveled=int(waypoint['total']),
                                      timepoint=1)
                 first_departure_time = departure_time
-            # elif waypoint_idx == (len(waypoints) - 1):
-            #     delta_time = self.__process_time_for_distance(waypoint['total'])
-            #     end_time = int(delta_time + first_departure_time)
-            #     stop_time = StopTime(feed_id=self.feed_id,
-            #                          trip_id=trip.trip_id,
-            #                          stop_id=stop.stop_id,
-            #                          stop_sequence=waypoint_idx,
-            #                          departure_time=end_time,
-            #                          arrival_time=end_time,
-            #                          shape_dist_traveled=int(waypoint['total']),
-            #                          timepoint=1)
+            elif waypoint_idx == (len(waypoints) - 1):
+                delta_time = self.__process_time_for_distance(waypoint['total'])
+                end_time = int(delta_time + first_departure_time)
+                stop_time = StopTime(feed_id=self.feed_id,
+                                     trip_id=trip.trip_id,
+                                     stop_id=stop.stop_id,
+                                     stop_sequence=waypoint_idx,
+                                     departure_time=end_time,
+                                     arrival_time=end_time,
+                                     shape_dist_traveled=int(waypoint['total']),
+                                     timepoint=1)
             else:
                 stop_time = StopTime(feed_id=self.feed_id,
                                      trip_id=trip.trip_id,
