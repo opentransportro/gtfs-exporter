@@ -127,8 +127,9 @@ class ClujApiDataProvider(ApiDataProvider):
             in_times, out_times = self.__load_timetables(route, service_id)
 
             if len(in_times) > 0:
-                # process individually each direction instance
                 self.__process_trips(route, shape_in, 0, waypoints, in_times, service_id)
+                is_route_supported = True
+            if len(out_times) > 0:
                 self.__process_trips(route, shape_out, 1, roundWaypoints, out_times, service_id)
                 is_route_supported = True
 
@@ -153,45 +154,41 @@ class ClujApiDataProvider(ApiDataProvider):
 
             self.dao.add(trip)
 
-            for waypoint_idx, waypoint in enumerate(waypoints):
-                if waypoint['name']:
-                    stop = Stop(self.feed_id,
-                                str(waypoint['stationID']),
-                                waypoint['name'],
-                                waypoint['lat'],
-                                waypoint['lng'])
-                    if stop.stop_id not in self.stops:
-                        self.stops.add(stop.stop_id)
-                        self.dao.add(stop)
+            self.__process_stops_and_times(trip, timepoint, waypoints)
 
-                    if waypoint_idx == 0:
-                        departure_time = self.__convert_tsm(timepoint)
-                        stop_time = StopTime(self.feed_id, trip.trip_id, stop.stop_id,
-                                             0,
-                                             departure_time, departure_time,
-                                             int(waypoint['total']),
-                                             0)
-                        first_departure_time = departure_time
-                    elif waypoint_idx == (len(waypoints) - 1):
-                        delta_time = self.__process_time_for_distance(waypoint['total'])
-                        end_time = int(delta_time + first_departure_time)
-                        stop_time = StopTime(self.feed_id, trip.trip_id, stop.stop_id,
-                                             waypoint_idx,
-                                             end_time, end_time,
-                                             int(waypoint['total']),
-                                             0)
-                    else:
-                        stop_time = StopTime(self.feed_id, trip.trip_id, stop.stop_id,
-                                             waypoint_idx,
-                                             0, 0,
-                                             int(waypoint['total']),
-                                             1)
-                    trip.stop_times.append(stop_time)
+    def __process_stops_and_times(self, trip, timepoint, waypoints):
+        for waypoint_idx, waypoint in enumerate([x for x in waypoints if x['name']]):
+            stop = Stop(self.feed_id,
+                        str(waypoint['stationID']),
+                        waypoint['name'],
+                        waypoint['lat'],
+                        waypoint['lng'])
 
-    def __process_time_for_distance(self, distance) -> int:
-        # 15 km / h = 15000 m / 3600 s = 4.1 m / s
-        average_speed = 4.1
-        return int(distance / average_speed)
+            if stop.stop_id not in self.stops:
+                self.stops.add(stop.stop_id)
+                self.dao.add(stop)
+
+            if waypoint_idx == 0:
+                departure_time = self.__convert_tsm(timepoint)
+                stop_time = StopTime(feed_id=self.feed_id,
+                                     trip_id=trip.trip_id,
+                                     stop_id=stop.stop_id,
+                                     stop_sequence=0,
+                                     departure_time=departure_time,
+                                     arrival_time=departure_time,
+                                     shape_dist_traveled=int(waypoint['total']),
+                                     timepoint=1)
+            else:
+                stop_time = StopTime(feed_id=self.feed_id,
+                                     trip_id=trip.trip_id,
+                                     stop_id=stop.stop_id,
+                                     stop_sequence=waypoint_idx,
+                                     departure_time=None,
+                                     arrival_time=None,
+                                     shape_dist_traveled=int(waypoint['total']),
+                                     timepoint=0)
+
+            trip.stop_times.append(stop_time)
 
     def __process_shape(self, route, direction, coordinates):
         logger.debug("processing shape")
@@ -209,6 +206,12 @@ class ClujApiDataProvider(ApiDataProvider):
         self.dao.bulk_save_objects(dao_shape_pts)
 
         return shp
+
+    @staticmethod
+    def __process_time_for_distance(distance) -> int:
+        # 15 km / h = 15000 m / 3600 s = 4.1 m / s
+        average_speed = 4.1
+        return int(distance / average_speed)
 
     @staticmethod
     def __load_timetables(route: Route, service_id):
