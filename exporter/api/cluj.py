@@ -2,6 +2,8 @@ import csv
 import logging
 
 import datetime as datetime
+import math
+
 from gtfslib.dao import Dao
 from gtfslib.model import Agency, FeedInfo, Calendar, CalendarDate, Route, Shape, ShapePoint, Stop, Trip, StopTime
 
@@ -115,11 +117,11 @@ class ClujApiDataProvider(ApiDataProvider):
                     if is_route_supported:
                         self.dao.add(route)
 
-    def __process_route(self, route, wayCoordinates, roundWayCoordinates, waypoints, roundWaypoints):
+    def __process_route(self, route, way_coordinates, round_way_coordinates, waypoints, round_waypoints):
         logger.debug(f" - processing trips for {route.name()}")
 
-        shape_in = self.__process_shape(route, 0, wayCoordinates)
-        shape_out = self.__process_shape(route, 1, roundWayCoordinates)
+        shape_in = self.__process_shape(route, 0, way_coordinates)
+        shape_out = self.__process_shape(route, 1, round_way_coordinates)
 
         is_route_supported = True
 
@@ -130,7 +132,7 @@ class ClujApiDataProvider(ApiDataProvider):
                 self.__process_trips(route, shape_in, 0, waypoints, in_times, service_id)
                 is_route_supported = True
             if len(out_times) > 0:
-                self.__process_trips(route, shape_out, 1, roundWaypoints, out_times, service_id)
+                self.__process_trips(route, shape_out, 1, round_waypoints, out_times, service_id)
                 is_route_supported = True
 
         return is_route_supported
@@ -152,12 +154,13 @@ class ClujApiDataProvider(ApiDataProvider):
                            }
                         )
 
-            self.dao.add(trip)
-
             self.__process_stops_and_times(trip, timepoint, waypoints)
 
+            self.dao.add(trip)
+
     def __process_stops_and_times(self, trip, timepoint, waypoints):
-        for waypoint_idx, waypoint in enumerate([x for x in waypoints if x['name']]):
+        filtered_waypoints = [x for x in waypoints if x['name']]
+        for waypoint_idx, waypoint in enumerate(filtered_waypoints):
             stop = Stop(self.feed_id,
                         str(waypoint['stationID']),
                         waypoint['name'],
@@ -168,6 +171,8 @@ class ClujApiDataProvider(ApiDataProvider):
                 self.stops.add(stop.stop_id)
                 self.dao.add(stop)
 
+            distance_traveled = math.floor(waypoint['total'])
+
             if waypoint_idx == 0:
                 departure_time = self.__convert_tsm(timepoint)
                 stop_time = StopTime(feed_id=self.feed_id,
@@ -176,10 +181,10 @@ class ClujApiDataProvider(ApiDataProvider):
                                      stop_sequence=0,
                                      departure_time=departure_time,
                                      arrival_time=departure_time,
-                                     shape_dist_traveled=int(waypoint['total']),
+                                     shape_dist_traveled=distance_traveled,
                                      timepoint=1)
                 first_departure_time = departure_time
-            elif waypoint_idx == (len(waypoints) - 1):
+            elif waypoint_idx == (len(filtered_waypoints) - 1):
                 delta_time = self.__process_time_for_distance(waypoint['total'])
                 end_time = int(delta_time + first_departure_time)
                 stop_time = StopTime(feed_id=self.feed_id,
@@ -188,7 +193,7 @@ class ClujApiDataProvider(ApiDataProvider):
                                      stop_sequence=waypoint_idx,
                                      departure_time=end_time,
                                      arrival_time=end_time,
-                                     shape_dist_traveled=int(waypoint['total']),
+                                     shape_dist_traveled=distance_traveled,
                                      timepoint=1)
             else:
                 stop_time = StopTime(feed_id=self.feed_id,
@@ -197,7 +202,8 @@ class ClujApiDataProvider(ApiDataProvider):
                                      stop_sequence=waypoint_idx,
                                      departure_time=None,
                                      arrival_time=None,
-                                     shape_dist_traveled=int(waypoint['total']),
+                                     shape_dist_traveled=distance_traveled,
+                                     interpolated=True,
                                      timepoint=0)
 
             trip.stop_times.append(stop_time)
@@ -262,6 +268,13 @@ class ClujApiDataProvider(ApiDataProvider):
 
     @staticmethod
     def __convert_tsm(time) -> int:
-        date = datetime.datetime.strptime(time, '%H:%M')  # for example
+
+        # check for time typos
+        hours, minutes = map(str, time.split(':'))
+
+        if int(hours) > 24:
+            hours = hours[::-1]
+
+        date = datetime.datetime.strptime(f"{hours}:{minutes}", '%H:%M')  # for example
         return int(datetime.timedelta(hours=date.hour, minutes=date.minute,
                                       seconds=date.second).total_seconds())
