@@ -5,13 +5,36 @@ import requests
 from ratelimit import limits, sleep_and_retry
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+import csv
+
+
+class RequestDecoder(object):
+    def decode(self, response):
+        """Decode the response and return the content"""
+        pass
+
+
+class JsonDecoder(RequestDecoder):
+    def decode(self, response):
+        return response.json()
+
+
+class CsvDecoder(RequestDecoder):
+    def decode(self, response):
+        if response.status_code == 200:
+            decoded_content = response.content.decode('utf-8')
+            timetable_cr = csv.reader(decoded_content.splitlines(), delimiter=',')
+            return list(timetable_cr)
+        else:
+            return []
 
 
 class Request(object):
-    def __init__(self, url: str, headers=None, logger=None):
+    def __init__(self, url: str, decoder=JsonDecoder(), headers=None, logger=None):
         if headers is None:
             headers = {}
         self._url = url
+        self.decoder = decoder
         self.headers = headers
         self.encoding = 'utf-8'
         if logger is None:
@@ -39,7 +62,7 @@ class Request(object):
         te = time.time()
         self.logger.debug('%r took %2.2f ms' % (request_url, (te - ts) * 1000))
 
-        return response.json()
+        return self.decoder.decode(response=response)
 
     @sleep_and_retry
     @limits(calls=20, period=1)

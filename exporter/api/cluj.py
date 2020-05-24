@@ -1,7 +1,5 @@
-import csv
-import logging
-
 import datetime as datetime
+import logging
 import math
 
 from gtfslib.dao import Dao
@@ -9,16 +7,13 @@ from gtfslib.model import Agency, FeedInfo, Calendar, CalendarDate, Route, Shape
 
 from exporter.api.requests import RequestExecutor
 from exporter.provider import ApiDataProvider
-from exporter.util.http import Request
+from exporter.util.http import Request, CsvDecoder
 from exporter.util.perf import measure_execution_time
 from exporter.util.spatial import DataNormalizer
-import requests as requests
 
 logger = logging.getLogger("gtfsexporter")
 
-SLEEP_TIME = 0
-
-TOKEN = 'eyJhbGciOiJIUzI1NiJ9.UGhnZDFrdndzWTFlUTRCd2pvbnVkR29pVG5ZQVROTDk.m9vK9qfiQtfx9_YyFrpfCRVEp6WFaRT8C_R65483d9o'
+WINK_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.UGhnZDFrdndzWTFlUTRCd2pvbnVkR29pVG5ZQVROTDk.m9vK9qfiQtfx9_YyFrpfCRVEp6WFaRT8C_R65483d9o'
 
 
 class ClujApiDataProvider(ApiDataProvider):
@@ -27,9 +22,12 @@ class ClujApiDataProvider(ApiDataProvider):
         # Optional, generate empty feed info
         self.feedinfo = FeedInfo(self.feed_id)
         self.request_executor = RequestExecutor()
-        self.url = "https://m-go.wink.ro/api"
 
-        self.line_detail_request = Request(self.url + "/route/all/{0}", headers={'azza': TOKEN})
+        self.line_detail_request = Request("https://m-go.wink.ro/api" + "/route/all/{0}",
+                                           headers={'azza': WINK_TOKEN})
+        self.times_request = Request("http://www.ctpcj.ro/orare/csv/orar_{0}_{1}.csv",
+                                     headers={'Referer': 'http://www.ctpcj.ro'},
+                                     decoder=CsvDecoder())
 
     @measure_execution_time
     def load_data_source(self, dao: Dao) -> bool:
@@ -47,7 +45,7 @@ class ClujApiDataProvider(ApiDataProvider):
         self.agency_ids = set()
         logger.info("Importing agencies...")
 
-        self.ctp_cluj = Agency(self.feed_id, 1, "Compania de Transport Public Cluj", "http://www.ctpcj.ro",
+        self.ctp_cluj = Agency(self.feed_id, 5, "Compania de Transport Public Cluj", "http://www.ctpcj.ro",
                                "Europe/Bucharest", **{
                 "agency_lang": "ro",
                 "agency_email": "sugestii@ctpcj.ro",
@@ -66,8 +64,9 @@ class ClujApiDataProvider(ApiDataProvider):
     def __load_services(self):
         self.service_ids = set()
 
-        start_date = CalendarDate.fromYYYYMMDD("20200501")
-        end_date = CalendarDate.fromYYYYMMDD("20201231")
+        today = datetime.datetime.today()
+        start_date = CalendarDate.fromYYYYMMDD(today.strftime('%Y%m%d'))
+        end_date = CalendarDate.fromYYYYMMDD(datetime.date(today.year, 12, 31).strftime('%Y%m%d'))
 
         def save_calendar_for(service_id: str, dow: []):
             self.service_ids.add(service_id)
@@ -225,26 +224,13 @@ class ClujApiDataProvider(ApiDataProvider):
 
         return shp
 
-    @staticmethod
-    def __process_time_for_distance(distance) -> int:
-        # 15 km / h = 15000 m / 3600 s = 4.1 m / s
-        average_speed = 4.1
-        return int(distance / average_speed)
-
-    @staticmethod
-    def __load_timetables(route: Route, service_id):
-        # TODO: move HTTP business
-        response = requests.get(f"http://www.ctpcj.ro/orare/csv/orar_{route.name()}_{service_id}.csv",
-                                headers={'Referer': 'http://www.ctpcj.ro'})
-
+    def __load_timetables(self, route: Route, service_id):
         in_times = []
         out_times = []
-        if response.status_code == 200:
-            decoded_content = response.content.decode('utf-8')
 
-            timetable_cr = csv.reader(decoded_content.splitlines(), delimiter=',')
-            csv_lines = list(timetable_cr)
+        csv_lines = self.times_request(route.name(), service_id)
 
+        if csv_lines:
             if len(csv_lines) <= 5:
                 return [], []
 
@@ -256,7 +242,13 @@ class ClujApiDataProvider(ApiDataProvider):
         return [x for x in in_times if x], [x for x in out_times if x]
 
     @staticmethod
-    def __parse_route_type(type: str):
+    def __process_time_for_distance(distance) -> int:
+        # 15 km / h = 15000 m / 3600 s = 4.1 m / s
+        average_speed = 4.1
+        return int(distance / average_speed)
+
+    @staticmethod
+    def __parse_route_type(route_type_literal: str):
         switcher = {
             '1': Route.TYPE_BUS,
             '2': Route.TYPE_TRAM,
@@ -264,13 +256,17 @@ class ClujApiDataProvider(ApiDataProvider):
             '4': Route.TYPE_SUBWAY,
         }
 
-        return switcher.get(type)
+        return switcher.get(route_type_literal)
 
     @staticmethod
     def __convert_tsm(time) -> int:
+        # check for time typos; adapt to variances of human mistakes
+        time_parts = time.split(':')
 
-        # check for time typos
-        hours, minutes = map(str, time.split(':'))
+        if len(time_parts) != 2:
+            time_parts = time.split('.')
+
+        hours, minutes = map(str, time_parts)
 
         if int(hours) > 24:
             hours = hours[::-1]
