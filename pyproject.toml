@@ -2,7 +2,7 @@
 name = "gtfs-exporter"
 version = "0.1.0"
 description = ""
-authors = ["Mihai Balint <balint.mihai@gmail.com>"]
+authors = ["Vlad Vesa <vlad@opentransport.ro>", "Claudiu Groza <claudiu@opentransport.ro>", "Mihai Balint <mihai@opentransport.ro>"]
 
 [tool.poetry.dependencies]
 python = "^3.7"
