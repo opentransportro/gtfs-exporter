@@ -3,8 +3,7 @@ import pytz
 import re
 import unicodedata
 
-import datetime as datetime
-
+import datetime
 from exporter.provider import ApiDataProvider
 from exporter.util.perf import measure_execution_time
 from exporter.util.http import Request
@@ -270,7 +269,7 @@ def flatten_times(today, hour_data) -> list:
         for minute in minutes:
             try:
                 if minute.endswith("*"):
-                    logger.info(f"Dropping star(*) suffix from time: `{hour}:{minute}`")
+                    logger.debug(f"Dropping star(*) suffix from time: `{hour}:{minute}`")
                 int_hour = int(hour)
                 int_minute = int(minute.strip("*"))
                 last_time = today + datetime.timedelta(
