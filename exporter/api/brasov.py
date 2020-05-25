@@ -21,6 +21,8 @@ from gtfslib.model import (
     Trip,
     StopTime,
 )
+from exporter.util.spatial import DataNormalizer
+from .brasov_data import DEFAULT_COLORS, COLOR_MAP, STOP_LIST, STOP_MAP
 
 logger = logging.getLogger("gtfsexporter.brasov")
 
@@ -28,61 +30,9 @@ ROUTE_LIST_URL = "https://ratbv-scraper.herokuapp.com/allroutes"
 STOP_LIST_URL = "https://ratbv-scraper.herokuapp.com/getStations"
 ROUTE_STOP_LIST_URL = "https://ratbv-scraper.herokuapp.com/schedule?route={}"
 
-DEBUG = False
-
 TIMEZONE = "Europe/Bucharest"
-DEFAULT_COLORS = {"route_color": "000000", "route_text_color": "FFFFFF"}
-COLOR_MAP = {
-    # TODO: Grab colors from official website (check out style.css)
-    # https://ratbv.ro/trasee-si-orare/
-    "Linia 1": {"route_color": "fcf81d", "route_text_color": "000000"},
-    "Linia 2": {"route_color": "00bd47", "route_text_color": "000000"},
-    "Linia 3": {"route_color": "a9aea8", "route_text_color": "000000"},
-    "Linia 4": {"route_color": "6b99ba", "route_text_color": "000000"},
-    "Linia 5": {"route_color": "f82b3c", "route_text_color": "000000"},
-    "Linia 5M": {"route_color": "fd7306", "route_text_color": "000000"},
-    "Linia 6": {"route_color": "01a98f", "route_text_color": "000000"},
-    "Linia 7": {"route_color": "fd7306", "route_text_color": "000000"},
-    "Linia 9": {"route_color": "efe44e", "route_text_color": "000000"},
-    "Linia 8": {"route_color": "ecc1df", "route_text_color": "000000"},
-    "Linia 10": {"route_color": "b31f37", "route_text_color": "000000"},
-    "Linia 14": {"route_color": "4bba3a", "route_text_color": "000000"},
-    "Linia 15": {"route_color": "030d91", "route_text_color": "000000"},
-    "Linia 16": {"route_color": "f66e32", "route_text_color": "000000"},
-    "Linia 17": {"route_color": "65eded", "route_text_color": "000000"},
-    "Linia 17B": {"route_color": "fdf681", "route_text_color": "000000"},
-    "Linia 18": {"route_color": "ed839a", "route_text_color": "000000"},
-    "Linia 20 Expres": {"route_color": "b1f000", "route_text_color": "000000"},
-    "Linia 21": {"route_color": "f66e32", "route_text_color": "000000"},
-    "Linia 22": {"route_color": "006bc5", "route_text_color": "000000"},
-    "Linia 23": {"route_color": "2391d0", "route_text_color": "000000"},
-    "Linia 23B": {"route_color": "db33a4", "route_text_color": "000000"},
-    "Linia 24": {"route_color": "db33a4", "route_text_color": "000000"},
-    "Linia 25": {"route_color": "a2e9bd", "route_text_color": "000000"},
-    "Linia 28": {"route_color": "efe44e", "route_text_color": "000000"},
-    "Linia 29": {"route_color": "f82b3c", "route_text_color": "000000"},
-    "Linia 31": {"route_color": "f66e32", "route_text_color": "000000"},
-    "Linia 32": {"route_color": "113bab", "route_text_color": "000000"},
-    "Linia 33": {"route_color": "c4c4c4", "route_text_color": "000000"},
-    "Linia 34": {"route_color": "9c9c9c", "route_text_color": "000000"},
-    "Linia 34B": {"route_color": "ecc1df", "route_text_color": "000000"},
-    "Linia 35": {"route_color": "af90a0", "route_text_color": "000000"},
-    "Linia 36": {"route_color": "338185", "route_text_color": "000000"},
-    "Linia 37": {"route_color": "6e3710", "route_text_color": "000000"},
-    "Linia 40": {"route_color": "ff9d1c", "route_text_color": "000000"},
-    "Linia 41": {"route_color": "56abc0", "route_text_color": "000000"},
-    "Linia 50": {"route_color": "e30e78", "route_text_color": "000000"},
-    "Linia 51": {"route_color": "beb53e", "route_text_color": "000000"},
-    "Linia 52": {"route_color": "a1d7d7", "route_text_color": "000000"},
-    "Linia 53": {"route_color": "f82b3c", "route_text_color": "000000"},
-    "Linia 120": {"route_color": "2391d0", "route_text_color": "000000"},
-    "Linia 210": {"route_color": "2391d0", "route_text_color": "000000"},
-    "Linia 220": {"route_color": "2391d0", "route_text_color": "000000"},
-    "Linia 310": {"route_color": "2391d0", "route_text_color": "000000"},
-    "Linia 420": {"route_color": "2391d0", "route_text_color": "000000"},
-    "Linia 520": {"route_color": "2391d0", "route_text_color": "000000"},
-    "Linia 540": {"route_color": "2391d0", "route_text_color": "000000"},
-}
+DEFAULT_LATITUDE = 45.669_646_7
+DEFAULT_LONGITUDE = 25.634_601_6
 
 # TODO: Grab route types from official website
 # https://ratbv.ro/trasee-si-orare/
@@ -180,9 +130,6 @@ class BrasovApiDataProvider(ApiDataProvider):
         logger.debug("Fetching schedule")
         for route_data in self.routes:
             self._load_route_stops(route_data)
-            if DEBUG:
-                logger.error("Breaking cycle early to facilitate debugging")
-                break
         logger.debug("Fetched schedule")
 
     def _load_route_stops(self, route_data):
@@ -215,7 +162,7 @@ class BrasovApiDataProvider(ApiDataProvider):
         # TODO: compute distance traveled based on stop gps positions
         distance_traveled = 1
         for stop_label, schedule_data in direction_stop_data.items():
-            stop_id = self._make_stop(stop_label)
+            stop_id = self._make_stop(stop_label, **STOP_MAP.get(stop_label, {}))
             for service_key, hour_data in schedule_data.items():
                 trips = []
                 times = flatten_times(today, hour_data)
@@ -238,13 +185,14 @@ class BrasovApiDataProvider(ApiDataProvider):
                         self.dao.add(trip)
 
                 for trip, time in zip(trips, times):
+                    total_seconds_from_midnight = (time - today).total_seconds()
                     stop_time = StopTime(
                         feed_id=self.feed_id,
                         trip_id=trip.trip_id,
                         stop_id=stop_id,
                         stop_sequence=stop_sequence,
-                        departure_time=time,
-                        arrival_time=time,
+                        arrival_time=int(total_seconds_from_midnight),
+                        departure_time=int(total_seconds_from_midnight),
                         shape_dist_traveled=distance_traveled,
                         timepoint=1,
                     )
@@ -259,16 +207,17 @@ class BrasovApiDataProvider(ApiDataProvider):
         logger.debug("Fetching stops")
         stop_data = self._fetch_data(STOP_LIST_URL, "stop list") or []
         for stop_label in stop_data:
-            self._make_stop(stop_label)
+            self._make_stop(stop_label, **STOP_MAP.get(stop_label, {}))
 
         logger.debug(f"Fetched {len(stop_data)} stops.")
 
     def _make_stop(self, stop_label, **kwargs):
         stop_id = sanitize(stop_label)
         if stop_id not in self.stop_map:
-            # TODO: find GPS coordinates for stops
-            lat = kwargs.get("lat", 45.669_646_7)
-            lng = kwargs.get("lng", 25.634_601_6)
+            if "latitude" not in kwargs or "longitude" not in kwargs:
+                logger.error(f"Mising GPS position for stop: {stop_label}")
+            lat = kwargs.get("latitude", DEFAULT_LATITUDE)
+            lng = kwargs.get("longitude", DEFAULT_LONGITUDE)
             self.dao.add(Stop(self.feed_id, stop_id, stop_label, lat, lng))
             self.stop_map[stop_id] = {"id": stop_id, "label": stop_label}
 
@@ -285,7 +234,10 @@ class BrasovApiDataProvider(ApiDataProvider):
         data_response = data_request(*args)
         error_status = data_response.get("status", {}).get("err")
         if error_status is not None and error_status is not False:
-            logger.error(f"Received error response: {data_response}")
+            logger.error(
+                f"Failed to fetch {entity} from {url}, "
+                f"received error response: {data_response}"
+            )
         return data_response.get("data")
 
 
