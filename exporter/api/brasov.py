@@ -160,7 +160,7 @@ class BrasovApiDataProvider(ApiDataProvider):
         for route_key, route_info in route_data.items():
             route_description = route_info.get("descriere")
             if "suspend" in route_key.lower():
-                logger.error("Skipping route {route_key}")
+                logger.error(f"Skipping route {route_key}")
                 continue
             route = Route(
                 feed_id=self.feed_id,
@@ -219,10 +219,12 @@ class BrasovApiDataProvider(ApiDataProvider):
             for service_key, hour_data in schedule_data.items():
                 trips = []
                 times = flatten_times(today, hour_data)
-                if service_key not in service_trips:
+                if service_key in service_trips:
+                    trips = service_trips[service_key]
+                else:
                     service_trips[service_key] = trips
                     trip_id_prefix = "_".join(
-                        [self.agency_id, route_id, direction_key, service_key]
+                        [str(self.agency_id), route_id, direction_key, service_key]
                     )
                     for idx, time in enumerate(times):
                         trip_id = sanitize(f"{trip_id_prefix}_{idx}")
@@ -234,8 +236,6 @@ class BrasovApiDataProvider(ApiDataProvider):
                         )
                         trips.append(trip)
                         self.dao.add(trip)
-                else:
-                    trips = service_trips[service_key]
 
                 for trip, time in zip(trips, times):
                     stop_time = StopTime(
@@ -284,8 +284,8 @@ class BrasovApiDataProvider(ApiDataProvider):
         data_request = Request(url)
         data_response = data_request(*args)
         error_status = data_response.get("status", {}).get("err")
-        if error_status is not None or error_status is not False:
-            logger.error("Received error response: {data_response}")
+        if error_status is not None and error_status is not False:
+            logger.error(f"Received error response: {data_response}")
         return data_response.get("data")
 
 
@@ -313,10 +313,21 @@ def _get_route_type(route_key):
 
 def flatten_times(today, hour_data) -> list:
     result = []
+    last_time = today
     for hour, minutes in hour_data.items():
-        result.extend(
-            [today + datetime.timedelta(hour=hour, minute=minute) for minute in minutes]
-        )
+        for minute in minutes:
+            try:
+                if minute.endswith("*"):
+                    logger.info(f"Dropping star(*) suffix from time: `{hour}:{minute}`")
+                int_hour = int(hour)
+                int_minute = int(minute.strip("*"))
+                last_time = today + datetime.timedelta(
+                    hours=int_hour, minutes=int_minute
+                )
+            except ValueError:
+                logger.error(f"Failed to parse time: `{hour}:{minute}`")
+
+            result.append(last_time)
     return result
 
 
