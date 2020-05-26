@@ -4,6 +4,7 @@ import re
 import unicodedata
 
 import datetime as datetime
+import dateutil.parser
 
 from exporter.provider import ApiDataProvider
 from exporter.util.perf import measure_execution_time
@@ -285,7 +286,7 @@ def flatten_times(today, hour_data) -> list:
 
 def midnight_today(timezone) -> datetime.datetime:
     tz = pytz.timezone(timezone)
-    naive_midnight = datetime.datetime.fromisoformat(datetime.date.today().isoformat())
+    naive_midnight = dateutil.parser.isoparse(datetime.date.today().isoformat())
     return tz.localize(naive_midnight)
 
 

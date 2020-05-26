@@ -15,6 +15,7 @@ environs = "=7.4.*"
 clint = "=0.5.1"
 ratelimit = "=2.2.1"
 pandas = "=1.0.3"
+dateutils = "^0.6.8"
 
 [tool.poetry.dev-dependencies]
 pytest = "^3.0"
