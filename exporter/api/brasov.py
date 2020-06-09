@@ -162,7 +162,12 @@ class BrasovApiDataProvider(ApiDataProvider):
         # TODO: compute distance traveled based on stop gps positions
         distance_traveled = 1
         for stop_label, schedule_data in direction_stop_data.items():
-            stop_id = self._make_stop(stop_label, **STOP_MAP.get(stop_label, {}))
+            stop_id = self._make_stop(
+                stop_label,
+                route_id=route_id,
+                route_direction_id=direction_key,
+                **STOP_MAP.get(stop_label, {}),
+            )
             for service_key, hour_data in schedule_data.items():
                 trips = []
                 times = flatten_times(today, hour_data)
@@ -213,9 +218,15 @@ class BrasovApiDataProvider(ApiDataProvider):
 
     def _make_stop(self, stop_label, **kwargs):
         stop_id = sanitize(stop_label)
+        route_id = kwargs.get("route_id", "")
+        route_direction_id = kwargs.get("route_direction_id", "")
+
         if stop_id not in self.stop_map:
             if "latitude" not in kwargs or "longitude" not in kwargs:
-                logger.error(f"Mising GPS position for stop: {stop_label}")
+                logger.error(
+                    f"Mising GPS position for stop: {stop_label}, "
+                    f"route: {route_id} / {route_direction_id}"
+                )
             lat = kwargs.get("latitude", DEFAULT_LATITUDE)
             lng = kwargs.get("longitude", DEFAULT_LONGITUDE)
             self.dao.add(Stop(self.feed_id, stop_id, stop_label, lat, lng))
@@ -224,7 +235,8 @@ class BrasovApiDataProvider(ApiDataProvider):
         elif stop_label != self.stop_map[stop_id]["label"]:
             existing_label = self.stop_map[stop_id]["label"]
             logger.error(
-                f"Stop label consistency issue: {stop_label} != {existing_label}"
+                f"Stop label consistency issue: {stop_label} != {existing_label}. "
+                f"route: {route_id} / {route_direction_id}"
             )
 
         return stop_id
