@@ -25,7 +25,7 @@ class Exporter:
 
         database_path = os.path.join(__cwd_path__, arguments['--id'] + ".sqlite")
 
-        # thsi delete should not exist
+        # this delete should not exist
         # if os.path.exists(database_path):
         #     os.remove(database_path)
 
