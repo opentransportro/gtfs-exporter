@@ -5,6 +5,17 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Brasov",
+            "type": "python",
+            "request": "launch",
+            "module": "exporter.main",
+            "args": [
+                "--provider=api",
+                "--url=brasov",
+                "--id=brasov"
+            ]
+        },
+        {
             "name": "Bucharest",
             "type": "python",
             "request": "launch",
@@ -25,7 +36,6 @@
                 "--url=constanta",
                 "--id=constanta"
             ]
-
         }
     ]
 }

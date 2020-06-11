@@ -5,7 +5,7 @@ description = ""
 authors = ["Vlad Vesa <vlad@opentransport.ro>", "Claudiu Groza <claudiu@opentransport.ro>", "Mihai Balint <mihai@opentransport.ro>"]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.6"
 requests = "=2.23.*"
 polyline = "=1.4.*"
 gtfslib = "=1.0.*"

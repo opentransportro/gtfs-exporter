@@ -15,7 +15,7 @@ class ConstantaApiDataProvider(RadcomApiDataProvider):
         self.agency_ids = set()
         logger.info("Importing agencies...")
 
-        stb = Agency(self.feed_id, 1, "Regia Autonomă de Transport în Comun Constanța", "https://ctbus.ro",
+        stb = Agency(self.feed_id, 1, "Regia AAutonomă de Transport în Comun Constanța", "https://ctbus.ro",
                      "Europe/Bucharest", **{
                 "agency_lang": "ro",
                 "agency_email": "contact@ctbus.ro",
@@ -23,11 +23,11 @@ class ConstantaApiDataProvider(RadcomApiDataProvider):
                 "agency_phone": "0241694960"
             })
 
-        self.dao.add(stb)
+        # add here safe insert
+        self.dao.session().merge(stb)
         self.agency_ids.add(stb.agency_id)
 
         self.dao.flush()
         self.dao.commit()
         logger.info("Imported %d agencies" % 1)
         pass
-
