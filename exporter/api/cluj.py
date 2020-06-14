@@ -5,7 +5,6 @@ import math
 from gtfslib.dao import Dao
 from gtfslib.model import Agency, FeedInfo, Calendar, CalendarDate, Route, Shape, ShapePoint, Stop, Trip, StopTime
 
-from exporter.api.requests import RequestExecutor
 from exporter.provider import ApiDataProvider
 from exporter.util.http import Request, CsvDecoder
 from exporter.util.perf import measure_execution_time
@@ -21,7 +20,6 @@ class ClujApiDataProvider(ApiDataProvider):
         super().__init__(feed_id, lenient, disable_normalization)
         # Optional, generate empty feed info
         self.feedinfo = FeedInfo(self.feed_id)
-        self.request_executor = RequestExecutor()
 
         self.line_detail_request = Request("https://m-go.wink.ro/api" + "/route/all/{0}",
                                            headers={'azza': WINK_TOKEN})
