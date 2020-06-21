@@ -19,15 +19,17 @@ jobs:
   include:
     # run unit tests
     - stage: unit-tests
-      script: pytest
       before_install:
         - pip install poetry
       install:
         - poetry install
+      script: pytest
 
     # build container
-    - stage: build
+    - stage: deploy
       script: ./travis-build.sh
+       # require the branch name to be master (note for PRs this is the base branch name)
+      if: branch = master
 
     # run integration tests
     - stage: integration-tests
