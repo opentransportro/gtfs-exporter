@@ -2,8 +2,34 @@ import os
 import stat
 import time
 import zipfile
+import logging
+import shutil
 
 import six
+
+
+from exporter import __version__ as version, __temp_path__ as tmp_path, __output_path__ as out_path, \
+    __cwd_path__ as app_path, __map_path__ as map_path
+
+
+
+logger = logging.getLogger('gtfsexporter')
+
+def create_folder(folder: str):
+    try:
+        logger.info(f" - creating {folder}")
+        if os.path.exists(folder):
+            shutil.rmtree(folder)
+        os.mkdir(folder)
+    except:
+        pass
+
+
+def init_filesystem():
+    logger.info("creating work directories if not exist")
+    create_folder(out_path)
+    create_folder(tmp_path)
+    create_folder(map_path)
 
 
 def file_age_in_seconds(pathname):

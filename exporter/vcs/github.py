@@ -1,6 +1,9 @@
+import logging
 from datetime import date
 
 from github import Github
+
+logger = logging.getLogger('gtfsexporter')
 
 
 class ReleaseGenerator(object):
@@ -12,14 +15,18 @@ class ReleaseGenerator(object):
         if files is None:
             files = []
 
-        g = Github(self.token)
-        repo = g.get_repo(self.repo)
+        if not (self.token is None or self.repo is None):
+            g = Github(self.token)
+            repo = g.get_repo(self.repo)
 
-        self.__delete_release(str(date.today()), repo)
-        self.__delete_release("latest", repo)
+            self.__delete_release(str(date.today()), repo)
+            self.__delete_release("latest", repo)
 
-        self.__make_release(str(date.today()), repo, files)
-        self.__make_release("latest", repo, files)
+            self.__make_release(str(date.today()), repo, files)
+            self.__make_release("latest", repo, files)
+        else:
+            logger.warning(
+                "Skipping release generation since provided repo and tokens do no exist")
 
     @staticmethod
     def __make_release(name: str, repo, files):

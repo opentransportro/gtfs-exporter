@@ -1,6 +1,6 @@
 services: docker
 install: true
-language: c
+language: python
 
 branches:
   only:

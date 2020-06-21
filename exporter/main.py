@@ -39,58 +39,23 @@ import shutil
 from docopt import docopt
 from environs import Env
 
-from exporter import Exporter
-from exporter import __version__ as version, __temp_path__ as tmp_path, __output_path__ as out_path, \
+from exporter.settings import GH_REPO, GH_TOKEN
+
+from exporter import Exporter, __version__ as version, __temp_path__ as tmp_path, __output_path__ as out_path, \
     __cwd_path__ as app_path, __map_path__ as map_path
 from exporter.api.builder import ProviderBuilder
 from exporter.provider import DataProvider, FileDataProvider, HttpDataProvider
 from exporter.util.perf import measure_execution_time
 from exporter.util.spatial import ShapeGenerator
 from exporter.vcs.github import ReleaseGenerator
-
-
-def init_logging():
-
-    logging.basicConfig()
-    logging.getLogger().setLevel(logging.INFO)
-
-    logger = logging.getLogger('gtfsexporter')
-    logger.setLevel(logging.INFO)
-
-    # sh = logging.StreamHandler(sys.stdout)
-    # logger.addHandler(sh)
+from exporter.util.storage import init_filesystem
+from exporter.util.logging import init_logging
 
 
 @measure_execution_time
 def main():
-    env = Env()
-    env.read_env(app_path)  # read .env file, if it exists
-
     init_logging()
-
-    logger = logging.getLogger('gtfsexporter')
-    logger.info("creating work directories if not exist")
-    try:
-        logger.info(" - creating out")
-        if os.path.exists(out_path):
-            shutil.rmtree(out_path)
-        os.mkdir(out_path)
-    except:
-        pass
-
-    try:
-        logger.info(" - creating tmp")
-        if os.path.exists(tmp_path):
-            shutil.rmtree(tmp_path)
-        os.mkdir(tmp_path)
-    except:
-        pass
-
-    try:
-        logger.info(" - creating map")
-        os.mkdir(map_path)
-    except:
-        pass
+    init_filesystem()
 
     arguments = docopt(__doc__, version='gtfs-exporter %s' % version)
     provider_type = arguments['--provider']
@@ -139,18 +104,11 @@ def main():
         exporter.process()
         exporter.export(bundle=True)
 
-    gh_repo = env.str("GH_REPO", None)
-    gh_token = env.str("GH_TOKEN", None)
+    rg = ReleaseGenerator(GH_REPO, GH_TOKEN)
 
-    if not (gh_repo is None or gh_token is None):
-        rg = ReleaseGenerator(gh_repo, gh_token)
-
-        rg.generate([
-                        os.path.join(out_path, f"gtfs-{arguments['--id']}.zip"),
-                    ] + glob.glob(os.path.join(out_path, "*.json")))
-    else:
-        logger.warning("Skipping release generation since provided repo and tokens do no exist")
-
+    rg.generate([
+                    os.path.join(out_path, f"gtfs-{arguments['--id']}.zip"),
+                ] + glob.glob(os.path.join(out_path, "*.json")))
 
 if __name__ == '__main__':
     main()
