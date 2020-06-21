@@ -28,4 +28,6 @@ jobs:
 
     # run integration tests
     - stage: integration-tests
-      script: docker run --rm opentransport/gtfs-exporter:dev  gtfs-process --provider=url --url=https://tursib.ro/trasee/gtfs --id=test
+      script: docker run --rm opentransport/gtfs-exporter  gtfs-process --provider=url --url=https://tursib.ro/trasee/gtfs --id=test
+      # require the branch name to be master (note for PRs this is the base branch name)
+      if: branch = master
