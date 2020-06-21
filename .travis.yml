@@ -6,24 +6,23 @@ branches:
     - master
     - dev
 
-python:
-  - "3.6"      # current default Python on Travis CI
-  - "3.7"
-  - "3.8"
-
 before_install:
 - echo -e "machine github.com\n  login $CI_USER_TOKEN" > ~/.netrc
-- pip install poetry
 
-# command to install dependencies
-install:
-  - poetry install
 
 jobs:
   include:
     # run unit tests
     - stage: unit-tests
       script: pytest
+      python:
+        - "3.6"      # current default Python on Travis CI
+        - "3.7"
+        - "3.8"
+      before_install:
+        - pip install poetry
+      install:
+        - poetry install
 
     # build container
     - stage: build
