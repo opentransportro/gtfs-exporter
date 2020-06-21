@@ -109,9 +109,9 @@ def test_brasov_export(dao_fixture: Dao):
     assert len(list(dao_fixture.stops())) > 0
     assert len(list(dao_fixture.trips())) > 0
 
-    stops_visited_by_route_trips = len(list(dao_fixture.stops()))
-    provider._load_stops()
-    assert len(list(dao_fixture.stops())) == stops_visited_by_route_trips
+    # stops_visited_by_route_trips = len(list(dao_fixture.stops()))
+    # provider._load_stops()
+    # assert len(list(dao_fixture.stops())) == stops_visited_by_route_trips
 
     # cleanup
     dao_fixture.delete_feed('2')
