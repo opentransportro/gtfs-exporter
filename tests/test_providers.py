@@ -6,6 +6,7 @@ from unittest import mock
 from gtfslib.dao import Dao
 
 from exporter.api.radcom import RadcomApiDataProvider
+from exporter.api.brasov import BrasovApiDataProvider
 
 base_path = dirname(abspath(__file__))
 
@@ -44,7 +45,7 @@ def _request_mock(url):
 @mock.patch("exporter.api.radcom.Request")
 def test_radcom_provider(mocked_request, dao_fixture: Dao):
     mocked_request.side_effect = _request_mock
-    radcomProvider = RadcomApiDataProvider("")
+    radcomProvider = RadcomApiDataProvider("", feed_id="1")
     assert radcomProvider is not None
 
     # load data from provider
@@ -80,3 +81,38 @@ def test_radcom_provider(mocked_request, dao_fixture: Dao):
         expected_shape_id = "shp1_{0}_{1}".format(trip.route_id, trip.direction_id)
         assert trip.shape_id == expected_shape_id
     assert trips_len == 14
+
+    # cleanup
+    dao_fixture.delete_feed('1')
+    dao_fixture.flush()
+
+
+def test_brasov_export(dao_fixture: Dao):
+    provider = BrasovApiDataProvider("2")
+    provider.dao = dao_fixture
+
+    provider._load_agencies()
+    assert provider.agency_id is not None
+    assert len(dao_fixture.agencies()) == 1
+
+    provider._load_service()
+    assert len(dao_fixture.calendars()) == 2
+
+    assert len(provider.routes) == 0
+    provider._load_routes()
+    assert len(provider.routes) > 0
+    assert len(dao_fixture.routes()) > 0
+
+    assert len(provider.stop_map) == 0
+    provider._load_schedule()
+    assert len(provider.stop_map) > 0
+    assert len(list(dao_fixture.stops())) > 0
+    assert len(list(dao_fixture.trips())) > 0
+
+    stops_visited_by_route_trips = len(list(dao_fixture.stops()))
+    provider._load_stops()
+    assert len(list(dao_fixture.stops())) == stops_visited_by_route_trips
+
+    # cleanup
+    dao_fixture.delete_feed('2')
+    dao_fixture.flush()
