@@ -1,0 +1,38 @@
+{
+  "lines": [
+    {
+      "id": 43,
+      "name": "1",
+      "type": "BUS",
+      "color": "#e36c09",
+      "has_notifications": false,
+      "price_ticket_sms": "0.30 EUR + TVA",
+      "ticket_sms": "L1",
+      "organization": { "id": 1, "logo": "ratc/logos/logo.jpeg" }
+    }
+  ],
+  "ticket_info": {
+    "tickets": [
+      {
+        "description": "Valabil 60 minute pe toate liniile",
+        "sms": "ORA",
+        "name": "Bilet de o ora",
+        "price": "0.42 EUR + TVA"
+      },
+      {
+        "description": "Valabil 24 ore pe toate liniile.",
+        "sms": "ZI",
+        "name": "Bilet 24 de ore",
+        "price": "1.1 EUR + TVA"
+      },
+      {
+        "description": "Valabil 7 zile pe toate liniile",
+        "sms": "S",
+        "name": "Bilet 7 zile",
+        "price": "6 EUR + TVA"
+      }
+    ],
+    "sms_number": "7475",
+    "disclaimer": "Suport clienți: 021 5277727 sau email la suport@mobilpay.ro. Achiziționarea biletului se va face înainte de urcarea în mijlocul de transport. Pentru verificare este obligatoriu să aveți telefonul funcțional și să păstrați mesajul pentru control. Pentru regulamentul complet de utilizare vă rugăm accesați www.ctbus.ro. SMS-ul de comandă este gratuit pentru rețelele Vodafone și Digi Mobil, iar în rețelele Orange și Telekom este de 0.05 euro + TVA."
+  }
+}

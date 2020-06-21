@@ -1,0 +1,31 @@
+[
+  {
+    "lines": [
+      {
+        "id": 43,
+        "name": "1",
+        "type": "BUS",
+        "color": "#e36c09",
+        "description": null,
+        "direction": 0,
+        "direction_name": "Bulevardul Tomis",
+        "arriving_time": 1080,
+        "arriving_times": [{ "arrivingTime": 1080, "timetable": true }],
+        "is_timetable": true,
+        "timetable": [
+          { "hour": "06", "minutes": ["02"] },
+          { "hour": "07", "minutes": ["02"] },
+          { "hour": "08", "minutes": ["02"] },
+          { "hour": "14", "minutes": ["02"] },
+          { "hour": "15", "minutes": ["02"] },
+          { "hour": "16", "minutes": ["02"] },
+          { "hour": "17", "minutes": ["02"] }
+        ],
+        "organization": { "id": 1, "logo": "ratc/logos/logo.jpeg" }
+      }
+    ],
+    "name": "Facultativa",
+    "description": "",
+    "transport_type": "TRAM"
+  }
+]

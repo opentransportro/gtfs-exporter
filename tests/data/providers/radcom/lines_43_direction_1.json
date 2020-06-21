@@ -1,0 +1,142 @@
+{
+  "id": 43,
+  "name": "1",
+  "type": "BUS",
+  "color": "#e36c09",
+  "stops": [
+    {
+      "id": 1012,
+      "lat": 44.201006,
+      "lng": 28.627512,
+      "name": "Bulevardul Tomis",
+      "description": "Bulevardul Tomis"
+    },
+    {
+      "id": 1229,
+      "lat": 44.203469,
+      "lng": 28.622202,
+      "name": "Boema ",
+      "description": "Boema "
+    },
+    {
+      "id": 1231,
+      "lat": 44.206385,
+      "lng": 28.617598,
+      "name": "Scapino",
+      "description": "Scapino"
+    },
+    {
+      "id": 1311,
+      "lat": 44.206217,
+      "lng": 28.613446,
+      "name": "Peco ",
+      "description": "Peco "
+    },
+    {
+      "id": 1309,
+      "lat": 44.20385,
+      "lng": 28.611016,
+      "name": "Obor",
+      "description": "Obor"
+    },
+    {
+      "id": 1158,
+      "lat": 44.199329,
+      "lng": 28.606373,
+      "name": "Vivo",
+      "description": "Vivo"
+    },
+    {
+      "id": 1250,
+      "lat": 44.197073,
+      "lng": 28.604765,
+      "name": "Metro ",
+      "description": "Metro "
+    },
+    {
+      "id": 1244,
+      "lat": 44.191646,
+      "lng": 28.601848,
+      "name": "Bariera ",
+      "description": "Bariera "
+    },
+    {
+      "id": 1241,
+      "lat": 44.186901,
+      "lng": 28.5998,
+      "name": "SCUT S.A.- sens PIATA CET",
+      "description": "SCUT S.A.- sens PIATA CET"
+    },
+    {
+      "id": 1237,
+      "lat": 44.184509,
+      "lng": 28.598665,
+      "name": "TAR S.A. ",
+      "description": "TAR S.A."
+    },
+    {
+      "id": 1234,
+      "lat": 44.177237,
+      "lng": 28.595352,
+      "name": "RAJA  ",
+      "description": "RAJA  "
+    },
+    {
+      "id": 1225,
+      "lat": 44.173585,
+      "lng": 28.594602,
+      "name": "Alba Iulia ",
+      "description": "Alba Iulia "
+    },
+    {
+      "id": 1181,
+      "lat": 44.164756,
+      "lng": 28.598866,
+      "name": "Dobrogea",
+      "description": "Dobrogea"
+    },
+    {
+      "id": 1223,
+      "lat": 44.163882,
+      "lng": 28.600651,
+      "name": "Lukoil",
+      "description": "Lukoil"
+    },
+    {
+      "id": 1182,
+      "lat": 44.161323,
+      "lng": 28.605681,
+      "name": "Cumpenei",
+      "description": "Cumpenei"
+    },
+    {
+      "id": 1183,
+      "lat": 44.159087,
+      "lng": 28.61041,
+      "name": "Piata CET",
+      "description": "Piata CET"
+    },
+    { "id": 1330, "lat": 44.154654, "lng": 28.606735, "name": "Facultativa" },
+    {
+      "id": 996,
+      "lat": 44.151556,
+      "lng": 28.60259,
+      "name": "Sere - debarcare (C.L.)",
+      "description": "Sere"
+    },
+    {
+      "id": 995,
+      "lat": 44.151517,
+      "lng": 28.602586,
+      "name": "Sere (C.L.)",
+      "description": "Sere"
+    }
+  ],
+  "has_notifications": false,
+  "price_ticket_sms": null,
+  "ticket_sms": null,
+  "organization": { "id": 1, "logo": "ratc/logos/logo.jpeg" },
+  "segment_path": "i_xlG}hvmDzAxBXb@c@t@}AnCMRaBpCeBxCGLUT[f@w@nA_@n@_@n@]l@SXe@|@OZMVMb@m@fAU^k@bAi@bAU`@g@|@u@pAgB`Du@nAq@lAGLKNi@~@c@v@_AbBi@|@g@p@UZQTWPIJa@h@c@f@fAfBPVNXd@l@^`@d@^d@\\\\ZZXZZJJHHb@b@`CbC~BbC`CdCXXVXr@v@PXd@f@HHLRH?VZZT^^pBrBlBpBXZX\\BFDFBBFBFD^\\v@x@v@x@nBrBf@d@d@f@b@b@@?ZZd@^HTVPRRHHL@PP`@Vb@VVPXPv@^b@PlAd@b@TRHHDLNHHAPBRPTJ@LCLQHAH?N?HCn@Vh@TtAj@hDtAxAl@LPt@X~@\\f@PXLNF^PZPLDP@JD^Nh@Tf@VL\\DFJHJDJDLDXNZL^Nb@Pf@R`ARTBLGb@Nn@Vp@VFHTRFHDJDLAVBJBJNNL@RAT?n@?h@Av@APEh@Rf@P~Bz@lAb@j@Xl@Vl@TVHXJzAh@xBt@RHh@PnAd@bA\\dA\\z@Z|@ZxBv@fN|EtBt@XRTLLDTDJBRFVHr@Tr@VnAb@|Af@`@J`@JZJ^JZFZFb@Hf@HRBR@h@Df@DPBR@lABj@?j@?V?XC`@APAL@f@IHJPDLIFMp@IhAKt@Iv@G`AEZBjAIjAExAEl@Gj@ChBKfBObAEh@Ef@Ej@E^G^INCPGXMRINI\\UXW^e@PUR[R_@Re@Xu@v@kBDQBUDIXm@Rc@jAoCfCqGf@qA^cADMrAkD`@cAb@iAb@eA`@gAVo@^U^{@j@oA`@mA`@iAb@kAL]XaA?Sb@iA`BgEbAmC~CeIPe@f@oA|@{B^}@JGDEDKFMDATTND~CrExArBdBdCpAhB^f@rBvCx@hAx@jAPVvF~HjA`Bj@t@`@l@vAtB`C`ER^L\\ZbAVj@HEFOIQi@aAk@cA",
+  "direction_name_tur": "Bulevardul Tomis",
+  "direction_name_retur": "Sere (C.L.)"
+}
