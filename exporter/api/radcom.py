@@ -31,8 +31,8 @@ class RadcomApiDataProvider(ApiDataProvider):
     def load_data_source(self, dao: Dao) -> bool:
         self.dao = dao
         self._load_agencies()
-        self.__load_services()
-        self.__load_routes()
+        self._load_services()
+        self._load_routes()
         dn = DataNormalizer(dao, self.feed_id)
         dn.normalize()
         dao.commit()
@@ -42,7 +42,7 @@ class RadcomApiDataProvider(ApiDataProvider):
     def _load_agencies(self):
         pass
 
-    def __load_services(self):
+    def _load_services(self):
         start_date = CalendarDate.fromYYYYMMDD("20200301")
         end_date = CalendarDate.fromYYYYMMDD("20201231")
 
@@ -63,14 +63,14 @@ class RadcomApiDataProvider(ApiDataProvider):
         save_calendar_for("LV", [1, 1, 1, 1, 1, 0, 0])
         save_calendar_for("SD", [0, 0, 0, 0, 0, 1, 1])
 
-    def __load_routes(self):
+    def _load_routes(self):
         stops = set()
         route_data = self.line_request()
         logger.info(f"Total lines to process \t\t\t{len(route_data['lines'])}")
         for line_nb, line in enumerate(route_data["lines"]):
             logger.info(f"\tprocessing line {line['name']} \t\t\t [{line_nb}/{len(route_data['lines'])}]")
             r = Route(self.feed_id, line['id'], line['organization']['id'],
-                      self.__parse_route_type(line['type']), **{
+                      self._parse_route_type(line['type']), **{
                     "route_color": line['color'],
                     "route_text_color": "000000",
                     "route_short_name": line['name']
@@ -118,12 +118,12 @@ class RadcomApiDataProvider(ApiDataProvider):
 
         index = 0
         if len(stoptime_data[0]['lines']) == 0:
-            logger.warning(f"{r} \n {s}")
+            logger.warning(f"\t\tStop information missing for route {r.route_short_name} and stop {s.stop_name}")
         if len(stoptime_data[0]['lines']) == 0 or stoptime_data[0]['lines'][0]['timetable'] is None:
             return False
 
         stop_times_dao = []
-        timetables = self.__convert_timetable(stoptime_data[0]['lines'][0]['timetable'])
+        timetables = self._convert_timetable(stoptime_data[0]['lines'][0]['timetable'])
         for schedule_time in timetables:
             if len(trips) <= index:
                 t = Trip(self.feed_id, f"{r.agency_id}_{r.route_id}_{direction}_{index}",
@@ -154,7 +154,7 @@ class RadcomApiDataProvider(ApiDataProvider):
         return True
 
     @staticmethod
-    def __convert_timetable(timetable) -> list:
+    def _convert_timetable(timetable) -> list:
         stoptimes = list()
         for t in timetable:
             for m in t['minutes']:
@@ -165,7 +165,7 @@ class RadcomApiDataProvider(ApiDataProvider):
         return list(dict.fromkeys(stoptimes))
 
     @staticmethod
-    def __parse_route_type(type: str):
+    def _parse_route_type(type: str):
         switcher = {
             'BUS': Route.TYPE_BUS,
             'SUBWAY': Route.TYPE_SUBWAY,
