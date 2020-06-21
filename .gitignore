@@ -11,6 +11,5 @@ out
 **/__pycache__/*
 **/.DS_Store
 .DS_Store
-.DS_Store
 .venv
 exporter/.DS_Store

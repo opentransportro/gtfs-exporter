@@ -2,6 +2,11 @@ services: docker
 install: true
 language: c
 
+branches:
+  only:
+    - master
+    - dev
+
 before_install:
 - echo -e "machine github.com\n  login $CI_USER_TOKEN" > ~/.netrc
 
