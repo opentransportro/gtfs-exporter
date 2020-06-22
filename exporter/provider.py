@@ -40,7 +40,7 @@ class DataProvider:
 
     def load_data_source(self, dao: Dao) -> bool:
         """Load in the file for extracting text."""
-        pass
+        return True
 
     @property
     def feed_id(self):

@@ -1,0 +1,45 @@
+[
+  {
+    "lines": [
+      {
+        "id": 43,
+        "name": "1",
+        "type": "BUS",
+        "color": "#e36c09",
+        "description": "Sere",
+        "direction": 0,
+        "direction_name": "Bulevardul Tomis",
+        "arriving_time": 900,
+        "arriving_times": [{ "arrivingTime": 900, "timetable": true }],
+        "is_timetable": true,
+        "timetable": [
+          { "hour": "06", "minutes": ["00"] },
+          { "hour": "07", "minutes": ["00"] },
+          { "hour": "08", "minutes": ["00"] },
+          { "hour": "14", "minutes": ["00"] },
+          { "hour": "15", "minutes": ["00"] },
+          { "hour": "16", "minutes": ["00"] },
+          { "hour": "17", "minutes": ["00"] }
+        ],
+        "organization": { "id": 1, "logo": "ratc/logos/logo.jpeg" }
+      },
+      {
+        "id": 47,
+        "name": "5-40",
+        "type": "BUS",
+        "color": "#c0504d",
+        "description": "Sere",
+        "direction": 0,
+        "direction_name": "Campus - (C.L.)",
+        "arriving_time": 300,
+        "arriving_times": null,
+        "is_timetable": true,
+        "timetable": null,
+        "organization": { "id": 1, "logo": "ratc/logos/logo.jpeg" }
+      }
+    ],
+    "name": "Sere (C.L.)",
+    "description": "Sere",
+    "transport_type": "TRAM"
+  }
+]

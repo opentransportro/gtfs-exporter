@@ -1,0 +1,135 @@
+{
+  "id": 43,
+  "name": "1",
+  "type": "BUS",
+  "color": "#e36c09",
+  "stops": [
+    {
+      "id": 995,
+      "lat": 44.151517,
+      "lng": 28.602586,
+      "name": "Sere (C.L.)",
+      "description": "Sere"
+    },
+    { "id": 1329, "lat": 44.155084, "lng": 28.60735, "name": "Facultativa" },
+    {
+      "id": 1185,
+      "lat": 44.159515,
+      "lng": 28.609628,
+      "name": "Piata CET",
+      "description": "Piata CET"
+    },
+    {
+      "id": 1222,
+      "lat": 44.162213,
+      "lng": 28.604241,
+      "name": "Cumpenei",
+      "description": "Cumpenei"
+    },
+    {
+      "id": 1224,
+      "lat": 44.164908,
+      "lng": 28.598642,
+      "name": "Dobrogea ",
+      "description": "Dobrogea "
+    },
+    {
+      "id": 1226,
+      "lat": 44.174338,
+      "lng": 28.594629,
+      "name": "Alba Iulia  ",
+      "description": "Alba Iulia"
+    },
+    {
+      "id": 1235,
+      "lat": 44.177738,
+      "lng": 28.595623,
+      "name": "TAM ",
+      "description": "TAM "
+    },
+    {
+      "id": 1236,
+      "lat": 44.184081,
+      "lng": 28.598512,
+      "name": "TAR S.A.   ",
+      "description": "TAR S.A. "
+    },
+    {
+      "id": 1242,
+      "lat": 44.187209,
+      "lng": 28.599979,
+      "name": "SCUT S.A. ",
+      "description": "SCUT S.A. "
+    },
+    {
+      "id": 1243,
+      "lat": 44.191142,
+      "lng": 28.601808,
+      "name": "Bariera ",
+      "description": "Bariera "
+    },
+    {
+      "id": 1251,
+      "lat": 44.197802,
+      "lng": 28.605313,
+      "name": "Metro  ",
+      "description": "Metro  "
+    },
+    {
+      "id": 1258,
+      "lat": 44.200285,
+      "lng": 28.607399,
+      "name": "Targ ",
+      "description": "Targ"
+    },
+    {
+      "id": 1310,
+      "lat": 44.203833,
+      "lng": 28.61107,
+      "name": "Obor  ",
+      "description": "Obor  "
+    },
+    {
+      "id": 1312,
+      "lat": 44.206045,
+      "lng": 28.613324,
+      "name": "Peco  ",
+      "description": "Peco  "
+    },
+    {
+      "id": 1230,
+      "lat": 44.206319,
+      "lng": 28.617634,
+      "name": "Scapino (1,3,3B,43C,43M)",
+      "description": "Scapino"
+    },
+    {
+      "id": 1228,
+      "lat": 44.203743,
+      "lng": 28.621614,
+      "name": "Boema  ",
+      "description": "Boema  "
+    },
+    {
+      "id": 1217,
+      "lat": 44.203576,
+      "lng": 28.623465,
+      "name": "Brotacei",
+      "description": "Brotacei"
+    },
+    {
+      "id": 1012,
+      "lat": 44.201006,
+      "lng": 28.627512,
+      "name": "Bulevardul Tomis",
+      "description": "Bulevardul Tomis"
+    }
+  ],
+  "has_notifications": false,
+  "price_ticket_sms": null,
+  "ticket_sms": null,
+  "organization": { "id": 1, "logo": "ratc/logos/logo.jpeg" },
+  "segment_path": "_jnlGemqmDa@o@a@s@a@o@_@q@k@{@k@{@mAaBkAaBcCkDaAuAaAsAiA_BoAgBoAgB_@k@g@s@k@w@m@{@o@}@o@}@m@{@oAiBqAiBESQi@AGCGGIKAC?SXBVKZAJ?L]x@u@fBq@`BQh@Wj@gCxGcAjCq@fBq@dBa@dAOLg@lAm@xAa@`A_AbCO\\Od@MZE^Wl@iArCcAhCi@vAi@tAELeAlC[z@e@jAa@dAc@fAYr@]v@Sb@Wh@Wh@CFKJGLGPO^_@|@Wj@IRIPMVMRQPST[^[V_@Z_@RWJq@Pg@HS@S@uAHe@Be@BqFXa@Dc@DeAFgADc@Dg@B[P_ADW@WB_@D_@Ds@DGCO?k@?CKCECEGCGAE?IDEFGRa@ROHk@BO@S?S@k@@k@AK?}@ES?SCi@Ce@GQAUCe@Ig@GYI[G]I_@KkA]g@Qc@OqBq@oAg@QKKIIKOUO?O?IAQ?QAyBw@uFmByBw@{@[}@[yBw@yBu@cA_@eA]k@SOGaDgAaA_@cA]kBo@k@Yc@SiBq@OGQEwBy@[KQK[IYImBc@OKIAUKSIKGMGMAcBm@aC_Am@W]MUKKEGG_A[]Ou@Yw@]]OICMQKIWOUQGKOk@KIMAIDGFIAQE]G]Ic@I[GQ?i@Uk@UkDwAuAk@i@Um@WKKg@YEIKGO?QK]SYMw@[y@]]Oi@UOIm@Y]SIEKKGKEOEM?SESGGGCI?MDMDKAMAG?YOQMmBkBwA{A[[sBuBY[CQCMAOA[ASGMOGSDEHMAK?I?SUUUWWyB}B_A_AUUI[Ym@S[k@WOIWIs@y@sBsB_@_@a@c@_CaC}@aAgAeAq@s@UUWWSQIIKIk@c@WSSQSSSWQWWa@AQAQAO?Q@O@QBi@Da@FSDUd@m@j@u@f@{@lBiDDGZi@LUNYn@gAhAqBlAwBp@mAf@_ATa@tAcCVc@N[LSFKDGLSRa@\\m@Xi@Ve@LSDICKIKKMUYY_@_@_@IKe@a@i@a@i@_@_@U_@]\\u@Zy@v@oB\\}@`@{@b@{@j@iAf@aAjBsDPa@n@gAR_@HAHA\\ELRd@r@b@p@dA~A??",
+  "direction_name_tur": "Bulevardul Tomis",
+  "direction_name_retur": "Sere (C.L.)"
+}
