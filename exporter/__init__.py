@@ -25,10 +25,6 @@ class Exporter:
 
         database_path = os.path.join(__cwd_path__, arguments['--id'] + ".sqlite")
 
-        # this delete should not exist
-        # if os.path.exists(database_path):
-        #     os.remove(database_path)
-
         self._dao = Dao(database_path, sql_logging=arguments['--logsql'], schema=arguments['--schema'])
 
         if arguments['--list']:

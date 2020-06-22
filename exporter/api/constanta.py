@@ -23,7 +23,6 @@ class ConstantaApiDataProvider(RadcomApiDataProvider):
                 "agency_phone": "0241694960"
             })
 
-        # add here safe insert
         self._safe_insert(stb)
         self.agency_ids.add(stb.agency_id)
 
