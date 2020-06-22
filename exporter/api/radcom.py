@@ -77,7 +77,6 @@ class RadcomApiDataProvider(ApiDataProvider):
                     "route_short_name": line['name']
                 })
             self._safe_insert(r)
-            self.dao.flush()
 
             # fetch both directions
             for direction in [0, 1]:
@@ -93,7 +92,7 @@ class RadcomApiDataProvider(ApiDataProvider):
                 logger.debug("processing shape")
                 shp = Shape(self.feed_id, f"shp{r.agency_id}_{r.route_id}_{direction}")
                 self._safe_insert(shp)
-                self.dao.flush()
+
 
                 dao_shape_pts = []
                 for shp_point_index, shape_point in enumerate(shape_points):
@@ -109,7 +108,7 @@ class RadcomApiDataProvider(ApiDataProvider):
                     if s.stop_id not in stops:
                         stops.add(s.stop_id)
                         self._safe_insert(s)
-                        self.dao.flush()
+
 
                     time.sleep(SLEEP_TIME)
 
@@ -139,11 +138,8 @@ class RadcomApiDataProvider(ApiDataProvider):
                             "direction_id": direction,
                             "shape_id": shp.shape_id})
                 trips.append(t)
-                # r.trips.append(t)
 
                 self._safe_insert(t)
-                self.dao.flush()
-                # self.dao.flush()
             else:
                 t = trips[index]
                 if t.stop_times[-1].arrival_time > schedule_time:
@@ -189,10 +185,19 @@ class RadcomApiDataProvider(ApiDataProvider):
         performs a safe bulk insert, that updates existing items
         or creates a new record if not found
         """
-        for record in bulk:
-            self._safe_insert(record)
+        with self.dao.session().begin_nested():
+            try:
+                for record in bulk:
+                    self._safe_insert(record)
 
-        self.dao.flush()
+                self.dao.flush()
+
+            except Exception as e:
+                logger.error(f"An exception was meet in bulk insert:{e}")
+                self.dao.session().rollback()
+
+
+
 
     def _safe_insert(self,record):
         """

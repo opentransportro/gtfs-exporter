@@ -38,6 +38,7 @@ class BucharestApiDataProvider(RadcomApiDataProvider):
                           })
         self._safe_insert(stb)
         self.agency_ids.add(stb.agency_id)
+
         self._safe_insert(metrorex)
         self.agency_ids.add(metrorex.agency_id)
 
