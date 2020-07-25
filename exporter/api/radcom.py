@@ -65,6 +65,8 @@ class RadcomApiDataProvider(ApiDataProvider):
         save_calendar_for("SD", [0, 0, 0, 0, 0, 1, 1])
 
     def __load_routes(self):
+        self.clear_trips()
+
         stops = set()
         route_data = self.line_request()
         logger.info(f"Total lines to process \t\t\t{len(route_data['lines'])}")
@@ -197,11 +199,19 @@ class RadcomApiDataProvider(ApiDataProvider):
                 self.dao.session().rollback()
 
 
-
-
     def _safe_insert(self,record):
         """
         performs a safe insert, that updates existing items
         or creates a new record if not found
         """
         self.dao.session().merge(record)
+
+
+    def clear_trips(self):
+        """
+        drops all the trips from the databse with the service id
+        equal to the one for the current execution (LV or SD)
+        """
+        self.dao.session().query(Trip).filter(Trip.service_id == self.service_id).delete(synchronize_session=False)
+        self.dao.session().commit()
+        logger.debug(f"Successfully droped trips with service id: {self.service_id}")
