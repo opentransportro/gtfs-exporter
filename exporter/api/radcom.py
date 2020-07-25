@@ -69,7 +69,7 @@ class RadcomApiDataProvider(ApiDataProvider):
         route_data = self.line_request()
         logger.info(f"Total lines to process \t\t\t{len(route_data['lines'])}")
         for line_nb, line in enumerate(route_data["lines"]):
-            logger.info(f"\tprocessing line {line['name']} \t\t\t [{line_nb}/{len(route_data['lines'])}]")
+            logger.info(f"\tprocessing line {line['name']} \t\t\t [{line_nb + 1}/{len(route_data['lines'])}]")
             r = Route(self.feed_id, line['id'], line['organization']['id'],
                       self._parse_route_type(line['type']), **{
                     "route_color": line['color'],
