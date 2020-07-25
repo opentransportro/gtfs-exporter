@@ -3,7 +3,7 @@ import time
 
 import polyline
 from gtfslib.dao import Dao
-from gtfslib.model import FeedInfo, Route, Trip, Stop, StopTime, Shape, ShapePoint, Calendar, CalendarDate, Agency
+from gtfslib.model import FeedInfo, Route, Trip, Stop, StopTime, Shape, ShapePoint, Calendar, CalendarDate
 
 from exporter.provider import ApiDataProvider
 from exporter.util.http import Request
@@ -78,7 +78,6 @@ class RadcomApiDataProvider(ApiDataProvider):
                     "route_text_color": "000000",
                     "route_short_name": line['name']
                 })
-            self._safe_insert(r)
 
             # fetch both directions
             for direction in [0, 1]:
@@ -114,6 +113,7 @@ class RadcomApiDataProvider(ApiDataProvider):
 
                     result = self.process_route_stop(r, s, shp, direction, stop_index, trips)
 
+            self._safe_insert(r)
             self.dao.flush()
 
     def process_route_stop(self, r: Route, s: Stop, shp: Shape, direction, stop_index, trips):
