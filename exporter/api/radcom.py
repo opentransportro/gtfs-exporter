@@ -11,8 +11,6 @@ from exporter.util.perf import measure_execution_time
 from exporter.util.spatial import DataNormalizer
 
 logger = logging.getLogger("gtfsexporter")
-SLEEP_TIME = 0
-
 
 class RadcomApiDataProvider(ApiDataProvider):
     def __init__(self, url: str, feed_id="", lenient=False, disable_normalization=False, **kwargs):
@@ -81,8 +79,6 @@ class RadcomApiDataProvider(ApiDataProvider):
 
             # fetch both directions
             for direction in [0, 1]:
-                time.sleep(SLEEP_TIME)
-
                 trip_data = self.line_detail_request(r.route_id, direction)
                 r.route_long_name = f"{trip_data['direction_name_tur']} - {trip_data['direction_name_retur']}"
 
@@ -108,8 +104,6 @@ class RadcomApiDataProvider(ApiDataProvider):
                     if s.stop_id not in stops:
                         stops.add(s.stop_id)
                         self._safe_insert(s)
-
-                    time.sleep(SLEEP_TIME)
 
                     result = self.process_route_stop(r, s, shp, direction, stop_index, trips)
 
