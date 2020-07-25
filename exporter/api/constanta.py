@@ -23,11 +23,10 @@ class ConstantaApiDataProvider(RadcomApiDataProvider):
                 "agency_phone": "0241694960"
             })
 
-        self.dao.add(stb)
+        self._safe_insert(stb)
         self.agency_ids.add(stb.agency_id)
 
         self.dao.flush()
         self.dao.commit()
         logger.info("Imported %d agencies" % 1)
         pass
-

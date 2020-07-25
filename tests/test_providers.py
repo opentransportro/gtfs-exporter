@@ -30,13 +30,13 @@ class MockedLineStopDetailsRequest:
 
 
 def _request_mock(url):
-    if(url == "/lines/"):
+    if url == "/lines/":
         return MockedLinesDetailsRequest()
 
-    if(url == "/lines/{0}/direction/{1}"):
+    if url == "/lines/{0}/direction/{1}":
         return MockedLineInfoDetailsRequest()
 
-    if(url == "/lines/{0}/stops/{1}"):
+    if url == "/lines/{0}/stops/{1}":
         return MockedLineStopDetailsRequest()
 
     return None

@@ -1,3 +1,3 @@
 {
-    "python.pythonPath": "/Users/vlad/Projects/gtfs-exporter/venv/bin/python3.7"
+    "python.pythonPath": "venv/bin/python"
 }

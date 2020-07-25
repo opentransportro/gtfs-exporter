@@ -36,9 +36,10 @@ class BucharestApiDataProvider(RadcomApiDataProvider):
                               "agency_fare_url": "http://metrorex.ro/titluri_de_calatorie_p1381-1",
                               "agency_phone": "0213193601"
                           })
-        self.dao.add(stb)
+        self._safe_insert(stb)
         self.agency_ids.add(stb.agency_id)
-        self.dao.add(metrorex)
+
+        self._safe_insert(metrorex)
         self.agency_ids.add(metrorex.agency_id)
 
         self.dao.flush()
