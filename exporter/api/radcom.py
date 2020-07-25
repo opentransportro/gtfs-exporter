@@ -107,12 +107,12 @@ class RadcomApiDataProvider(ApiDataProvider):
                         stops.add(s.stop_id)
                         self._safe_insert(s)
 
-                    result = self.process_route_stop(r, s, shp, direction, stop_index, trips)
+                    result = self._process_route_stop(r, s, shp, direction, stop_index, trips)
 
             self._safe_insert(r)
             self.dao.flush()
 
-    def process_route_stop(self, r: Route, s: Stop, shp: Shape, direction, stop_index, trips):
+    def _process_route_stop(self, r: Route, s: Stop, shp: Shape, direction, stop_index, trips):
         # executing request
         stoptime_data = self.line_stops_request(r.route_id, s.stop_id)
 
