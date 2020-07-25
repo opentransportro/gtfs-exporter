@@ -41,8 +41,10 @@ class RadcomApiDataProvider(ApiDataProvider):
         pass
 
     def _load_services(self):
-        start_date = CalendarDate.fromYYYYMMDD("20200301")
-        end_date = CalendarDate.fromYYYYMMDD("20201231")
+        import datetime
+        year = datetime.datetime.now().year
+        start_date = CalendarDate.fromYYYYMMDD(f"{year}0101")
+        end_date = CalendarDate.fromYYYYMMDD(f"{year}1231")
 
         def save_calendar_for(service_id: str, dow: []):
             service = Calendar(self.feed_id, service_id)
