@@ -3,7 +3,7 @@ import json
 from os.path import abspath, dirname
 from unittest import mock
 
-from gtfslib.dao import Dao
+from exporter.gtfs.dao import Dao
 
 from exporter.api.radcom import RadcomApiDataProvider
 from exporter.api.brasov import BrasovApiDataProvider

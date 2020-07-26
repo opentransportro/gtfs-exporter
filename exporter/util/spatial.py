@@ -2,9 +2,9 @@ import logging
 import os
 import shutil
 
-from gtfslib.model import Trip, Shape
-from gtfslib.spatial import orthodromic_distance, orthodromic_seg_distance, DistanceCache
-from gtfslib.utils import ContinousPiecewiseLinearFunc
+from exporter.gtfs.model import Trip, Shape
+from exporter.gtfs.spatial import orthodromic_distance, orthodromic_seg_distance, DistanceCache
+from exporter.gtfs.utils import ContinousPiecewiseLinearFunc
 
 from exporter import __map_path__, __temp_path__
 from exporter.util.csv import remove_column

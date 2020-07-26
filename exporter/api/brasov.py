@@ -8,8 +8,8 @@ import datetime
 from exporter.provider import ApiDataProvider
 from exporter.util.perf import measure_execution_time
 from exporter.util.http import Request
-from gtfslib.dao import Dao
-from gtfslib.model import (
+from exporter.gtfs.dao import Dao
+from exporter.gtfs.model import (
     Agency,
     FeedInfo,
     Calendar,

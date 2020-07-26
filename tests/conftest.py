@@ -2,7 +2,7 @@ import os
 import pytest
 import tempfile
 
-from gtfslib.dao import Dao
+from exporter.gtfs.dao import Dao
 
 
 @pytest.fixture(scope="session")

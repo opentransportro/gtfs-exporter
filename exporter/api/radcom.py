@@ -1,9 +1,9 @@
 import logging
-import time
+import datetime
 
 import polyline
-from gtfslib.dao import Dao
-from gtfslib.model import FeedInfo, Route, Trip, Stop, StopTime, Shape, ShapePoint, Calendar, CalendarDate
+from exporter.gtfs.dao import Dao
+from exporter.gtfs.model import FeedInfo, Route, Trip, Stop, StopTime, Shape, ShapePoint, Calendar, CalendarDate
 
 from exporter.provider import ApiDataProvider
 from exporter.util.http import Request
@@ -22,7 +22,6 @@ class RadcomApiDataProvider(ApiDataProvider):
         self.line_detail_request = Request(url + "/lines/{0}/direction/{1}")
         self.line_stops_request = Request(url + "/lines/{0}/stops/{1}")
 
-        import datetime
         self.service_id = "LV" if datetime.datetime.today().weekday() < 5 else "SD"
 
     @measure_execution_time
@@ -41,7 +40,6 @@ class RadcomApiDataProvider(ApiDataProvider):
         pass
 
     def _load_services(self):
-        import datetime
         year = datetime.datetime.now().year
         start_date = CalendarDate.fromYYYYMMDD(f"{year}0101")
         end_date = CalendarDate.fromYYYYMMDD(f"{year}1231")
@@ -205,4 +203,4 @@ class RadcomApiDataProvider(ApiDataProvider):
         """
         self.dao.session().query(Trip).filter(Trip.service_id == self.service_id).delete(synchronize_session=False)
         self.dao.session().commit()
-        logger.debug(f"Successfully droped trips with service id: {self.service_id}")
+        logger.info(f"Successfully droped trips with service id: {self.service_id}")

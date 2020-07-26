@@ -1,5 +1,5 @@
 import ipdb
-from gtfslib.dao import Dao
+from exporter.gtfs.dao import Dao
 
 from exporter import __version__
 

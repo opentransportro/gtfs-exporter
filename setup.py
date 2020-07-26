@@ -26,7 +26,7 @@ setup(
     ],
     keywords='GTFS transit exporter',
     packages=find_packages(),
-    install_requires=['gtfslib', 'clint', 'pandas', 'pygithub', 'environs', 'polyline', 'ratelimit'],
+    install_requires=['gtfslib', 'clint', 'pandas', 'pygithub', 'environs', 'polyline', 'ratelimit', 'sqlalchemy', 'six', 'docopt', 'requests', 'pyqtree', 'pyshp'],
     extras_require={
         'dev': ['check-manifest'],
         'test': ['coverage'],
