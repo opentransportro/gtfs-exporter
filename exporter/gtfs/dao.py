@@ -58,6 +58,11 @@ class Dao(object):
         self._transfer_fromstop = aliased(Stop, name="tr_from_stop")
         self._transfer_tostop = aliased(Stop, name="tr_to_stop")
 
+    @property
+    def orm(self):
+        return self._orm
+
+    @property
     def session(self):
         return self._session
 
@@ -158,12 +163,12 @@ class Dao(object):
     def in_area(self, area):
         """Return a filter filtering stops in the given area (RectangularArea...)"""
         return (Stop.stop_lat >= area.min_lat) & (Stop.stop_lat <= area.max_lat) & (Stop.stop_lon >= area.min_lon) & (
-                    Stop.stop_lon <= area.max_lon)
+                Stop.stop_lon <= area.max_lon)
 
     def in_bounds(self, min_lat, min_lon, max_lat, max_lon):
         """Return a filter filtering stops in the given bounds."""
         return (Stop.stop_lat >= min_lat) & (Stop.stop_lat <= max_lat) & (Stop.stop_lon >= min_lon) & (
-                    Stop.stop_lon <= max_lon)
+                Stop.stop_lon <= max_lon)
 
     def transfer(self, from_stop_id, to_stop_id, feed_id="", prefetch_stops=True):
         query = self._session.query(Transfer)
@@ -309,7 +314,7 @@ class Dao(object):
     def hops(self, delta=1, fltr=None, prefetch_trips=True, prefetch_stop_times=False):
         query = self._session.query(self._stoptime1, self._stoptime2).filter(
             (self._stoptime1.trip_id == self._stoptime2.trip_id) & (
-                        (self._stoptime1.stop_sequence + delta) == self._stoptime2.stop_sequence)).distinct()
+                    (self._stoptime1.stop_sequence + delta) == self._stoptime2.stop_sequence)).distinct()
         if fltr is not None:
             query = _AutoJoiner(self._orm, query, fltr).autojoin()
             query = query.filter(fltr)
@@ -388,7 +393,7 @@ class Dao(object):
                 yield item
 
     def load_gtfs(self, filename, feed_id="", lenient=False, disable_normalization=False, **kwargs):
-        @transactional(self.session())
+        @transactional(self.session)
         def _do_load_gtfs():
             with Gtfs(ZipFileSource(filename)).load() as gtfs:
                 _convert_gtfs_model(feed_id, gtfs, self, lenient, disable_normalization, **kwargs)

@@ -1,12 +1,13 @@
-import pytest
 import json
+import unittest
 from os.path import abspath, dirname
 from unittest import mock
 
-from exporter.gtfs.dao import Dao
+from sqlalchemy.orm import clear_mappers
 
-from exporter.api.radcom import RadcomApiDataProvider
 from exporter.api.brasov import BrasovApiDataProvider
+from exporter.api.radcom import RadcomApiDataProvider
+from exporter.gtfs.dao import Dao
 
 base_path = dirname(abspath(__file__))
 
@@ -42,77 +43,82 @@ def _request_mock(url):
     return None
 
 
-@mock.patch("exporter.api.radcom.Request")
-def test_radcom_provider(mocked_request, dao_fixture: Dao):
-    mocked_request.side_effect = _request_mock
-    radcomProvider = RadcomApiDataProvider("", feed_id="1")
-    assert radcomProvider is not None
+class TestProviders(unittest.TestCase):
+    def setUp(self):
+        unittest.TestCase.setUp(self)
+        clear_mappers()
+        self.dao_object = Dao()
 
-    # load data from provider
-    load_result = radcomProvider.load_data_source(dao_fixture)
-    assert load_result is True
+    @mock.patch("exporter.api.radcom.Request")
+    def test_radcom_provider(self, mocked_request):
+        mocked_request.side_effect = _request_mock
+        radcomProvider = RadcomApiDataProvider("", feed_id="1")
+        assert radcomProvider is not None
 
-    # check calendars
-    assert len(dao_fixture.calendars()) == 2
+        # load data from provider
+        load_result = radcomProvider.load_data_source(self.dao_object)
+        assert load_result is True
 
-    # check routes
-    routes_len = 0
-    for route in dao_fixture.routes():
-        routes_len = routes_len + 1
-        assert route.route_id == '43'
-        assert route.route_short_name == '1'
-        assert route.route_long_name == 'Bulevardul Tomis - Sere (C.L.)'
-    assert routes_len == 1
+        # check calendars
+        assert len(self.dao_object.calendars()) == 2
 
-    # check stops
-    stops_len = 0
-    for stop in dao_fixture.stops():
-        stops_len = stops_len + 1
-        assert len(stop.stop_times) > 0
-        assert stop.stop_lat != 0.0
-        assert stop.stop_lon != 0.0
-    assert stops_len == 35
+        # check routes
+        routes_len = 0
+        for route in self.dao_object.routes():
+            routes_len = routes_len + 1
+            assert route.route_id == '43'
+            assert route.route_short_name == '1'
+            assert route.route_long_name == 'Bulevardul Tomis - Sere (C.L.)'
+        assert routes_len == 1
 
-    # check trips
-    trips_len = 0
-    for trip in dao_fixture.trips():
-        trips_len = trips_len + 1
-        assert trip.shape != None
-        expected_shape_id = "shp1_{0}_{1}".format(trip.route_id, trip.direction_id)
-        assert trip.shape_id == expected_shape_id
-    assert trips_len == 14
+        # check stops
+        stops_len = 0
+        for stop in self.dao_object.stops():
+            stops_len = stops_len + 1
+            assert len(stop.stop_times) > 0
+            assert stop.stop_lat != 0.0
+            assert stop.stop_lon != 0.0
+        assert stops_len == 35
 
-    # cleanup
-    dao_fixture.delete_feed('1')
-    dao_fixture.flush()
+        # check trips
+        trips_len = 0
+        for trip in self.dao_object.trips():
+            trips_len = trips_len + 1
+            assert trip.shape != None
+            expected_shape_id = "shp1_{0}_{1}".format(trip.route_id, trip.direction_id)
+            assert trip.shape_id == expected_shape_id
+        assert trips_len == 14
 
+        # cleanup
+        self.dao_object.delete_feed('1')
+        self.dao_object.flush()
 
-def test_brasov_export(dao_fixture: Dao):
-    provider = BrasovApiDataProvider("2")
-    provider.dao = dao_fixture
+    def test_brasov_export(self):
+        provider = BrasovApiDataProvider("2")
+        provider.dao = self.dao_object
 
-    provider._load_agencies()
-    assert provider.agency_id is not None
-    assert len(dao_fixture.agencies()) == 1
+        provider._load_agencies()
+        assert provider.agency_id is not None
+        assert len(self.dao_object.agencies()) == 1
 
-    provider._load_service()
-    assert len(dao_fixture.calendars()) == 2
+        provider._load_service()
+        assert len(self.dao_object.calendars()) == 2
 
-    assert len(provider.routes) == 0
-    provider._load_routes()
-    assert len(provider.routes) > 0
-    assert len(dao_fixture.routes()) > 0
+        assert len(provider.routes) == 0
+        provider._load_routes()
+        assert len(provider.routes) > 0
+        assert len(self.dao_object.routes()) > 0
 
-    assert len(provider.stop_map) == 0
-    provider._load_schedule()
-    assert len(provider.stop_map) > 0
-    assert len(list(dao_fixture.stops())) > 0
-    assert len(list(dao_fixture.trips())) > 0
+        assert len(provider.stop_map) == 0
+        provider._load_schedule()
+        assert len(provider.stop_map) > 0
+        assert len(list(self.dao_object.stops())) > 0
+        assert len(list(self.dao_object.trips())) > 0
 
-    # stops_visited_by_route_trips = len(list(dao_fixture.stops()))
-    # provider._load_stops()
-    # assert len(list(dao_fixture.stops())) == stops_visited_by_route_trips
+        # stops_visited_by_route_trips = len(list(dao_fixture.stops()))
+        # provider._load_stops()
+        # assert len(list(dao_fixture.stops())) == stops_visited_by_route_trips
 
-    # cleanup
-    dao_fixture.delete_feed('2')
-    dao_fixture.flush()
+        # cleanup
+        self.dao_object.delete_feed('2')
+        self.dao_object.flush()

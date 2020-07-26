@@ -65,7 +65,7 @@ class FileDataProvider(DataProvider):
         self._folder_source = FolderSource(self.path, output_path=exporter.__output_path__)
 
     def load_data_source(self, dao: Dao) -> bool:
-        @transactional(dao.session())
+        @transactional(dao.session)
         def _do_load_gtfs():
             with Gtfs(self.folder_source).load() as gtfs:
                 from exporter.gtfs.converter import _convert_gtfs_model
