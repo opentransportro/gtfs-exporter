@@ -258,14 +258,14 @@ class TestDummyGtfs(unittest.TestCase):
             if type == Stop.TYPE_STATION:
                 self.assertTrue(stop_count == 3)
             if type == Stop.TYPE_STOP:
-                self.assertTrue(stop_count > 15 and stop_count < 30)
+                self.assertTrue(15 < stop_count < 30)
 
         # A more complex custom query: count the number of trips per calendar date per route on june/july
         from_date = CalendarDate.ymd(2016, 6, 1)
         to_date = CalendarDate.ymd(2016, 7, 31)
         for date, route, trip_count in dao.session \
                     .query(CalendarDate.date, Route, func.count(Trip.trip_id)) \
-                    .join(Calendar).join(Trip).join(Route) \
+                    .select_from(Calendar).join(Trip).join(Route) \
                     .filter((func.date(CalendarDate.date) >= from_date.date) & (func.date(CalendarDate.date) <= to_date.date)) \
                     .group_by(CalendarDate.date, Route.route_short_name) \
                     .all():
