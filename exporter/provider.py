@@ -3,8 +3,8 @@ from zipfile import ZipFile
 
 import pandas as pd
 import requests
-from gtfslib.csvgtfs import Gtfs
-from gtfslib.dao import Dao, transactional
+from exporter.gtfs.csvgtfs import Gtfs
+from exporter.gtfs.dao import Dao, transactional
 
 import exporter
 
@@ -65,10 +65,10 @@ class FileDataProvider(DataProvider):
         self._folder_source = FolderSource(self.path, output_path=exporter.__output_path__)
 
     def load_data_source(self, dao: Dao) -> bool:
-        @transactional(dao.session())
+        @transactional(dao.session)
         def _do_load_gtfs():
             with Gtfs(self.folder_source).load() as gtfs:
-                from gtfslib.converter import _convert_gtfs_model
+                from exporter.gtfs.converter import _convert_gtfs_model
                 _convert_gtfs_model(self.feed_id, gtfs, dao, self.lenient, self.disable_normalization)
 
         _do_load_gtfs()

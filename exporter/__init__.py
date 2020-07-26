@@ -1,8 +1,8 @@
 import logging
 import os
 
-from gtfslib.dao import Dao
-from gtfslib.model import Route
+from exporter.gtfs.dao import Dao
+from exporter.gtfs.model import Route
 
 from exporter.provider import DataProvider
 from exporter.writer import Writer, Context

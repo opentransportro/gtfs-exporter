@@ -1,9 +1,9 @@
 import logging
-import time
+import datetime
 
 import polyline
-from gtfslib.dao import Dao
-from gtfslib.model import FeedInfo, Route, Trip, Stop, StopTime, Shape, ShapePoint, Calendar, CalendarDate
+from exporter.gtfs.dao import Dao
+from exporter.gtfs.model import FeedInfo, Route, Trip, Stop, StopTime, Shape, ShapePoint, Calendar, CalendarDate
 
 from exporter.provider import ApiDataProvider
 from exporter.util.http import Request
@@ -22,7 +22,6 @@ class RadcomApiDataProvider(ApiDataProvider):
         self.line_detail_request = Request(url + "/lines/{0}/direction/{1}")
         self.line_stops_request = Request(url + "/lines/{0}/stops/{1}")
 
-        import datetime
         self.service_id = "LV" if datetime.datetime.today().weekday() < 5 else "SD"
 
     @measure_execution_time
@@ -41,7 +40,6 @@ class RadcomApiDataProvider(ApiDataProvider):
         pass
 
     def _load_services(self):
-        import datetime
         year = datetime.datetime.now().year
         start_date = CalendarDate.fromYYYYMMDD(f"{year}0101")
         end_date = CalendarDate.fromYYYYMMDD(f"{year}1231")
@@ -180,7 +178,7 @@ class RadcomApiDataProvider(ApiDataProvider):
         performs a safe bulk insert, that updates existing items
         or creates a new record if not found
         """
-        with self.dao.session().begin_nested():
+        with self.dao.session.begin_nested():
             try:
                 for record in bulk:
                     self._safe_insert(record)
@@ -189,20 +187,20 @@ class RadcomApiDataProvider(ApiDataProvider):
 
             except Exception as e:
                 logger.error(f"An exception was meet in bulk insert:{e}")
-                self.dao.session().rollback()
+                self.dao.session.rollback()
 
     def _safe_insert(self,record):
         """
         performs a safe insert, that updates existing items
         or creates a new record if not found
         """
-        self.dao.session().merge(record)
+        self.dao.session.merge(record)
 
     def _clear_trips(self):
         """
         drops all the trips from the databse with the service id
         equal to the one for the current execution (LV or SD)
         """
-        self.dao.session().query(Trip).filter(Trip.service_id == self.service_id).delete(synchronize_session=False)
-        self.dao.session().commit()
-        logger.debug(f"Successfully droped trips with service id: {self.service_id}")
+        self.dao.session.query(Trip).filter(Trip.service_id == self.service_id).delete(synchronize_session=False)
+        self.dao.session.commit()
+        logger.info(f"Successfully droped trips with service id: {self.service_id}")

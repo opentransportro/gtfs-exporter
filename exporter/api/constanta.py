@@ -1,6 +1,6 @@
 import logging
 
-from gtfslib.model import Agency
+from exporter.gtfs.model import Agency
 
 from exporter.api.radcom import RadcomApiDataProvider
 
@@ -29,4 +29,3 @@ class ConstantaApiDataProvider(RadcomApiDataProvider):
         self.dao.flush()
         self.dao.commit()
         logger.info("Imported %d agencies" % 1)
-        pass
