@@ -5,6 +5,17 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Timisoara",
+            "type": "python",
+            "request": "launch",
+            "module": "exporter.main",
+            "args": [
+                "--provider=url",
+                "--url=https://api.opentransport.ro/gtfs/v1/static",
+                "--id=timisoara"
+            ]
+        },
+        {
             "name": "Brasov",
             "type": "python",
             "request": "launch",
