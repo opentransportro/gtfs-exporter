@@ -132,6 +132,8 @@ class Route(object):
     TYPE_FUNICULAR = 7
 
     def __init__(self, feed_id, route_id, agency_id, route_type, **kwargs):
+        self.route_long_name = None
+        self.route_short_name = None
         self.feed_id = feed_id
         self.route_id = route_id
         self.agency_id = agency_id
@@ -170,6 +172,7 @@ class Calendar(object):
 class CalendarDate(object):
 
     def __init__(self, date):
+        self.service_id = None
         self.feed_id = None
         self.date = date
 
@@ -254,6 +257,7 @@ class Trip(object):
                  bikes_allowed=BIKES_UNKNOWN,
                  exact_times=TIME_EXACT,
                  frequency_generated=False, **kwargs):
+        self.stop_times = []
         self.feed_id = feed_id
         self.trip_id = trip_id
         self.route_id = route_id

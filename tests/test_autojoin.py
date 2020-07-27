@@ -49,10 +49,13 @@ class TestAutoJoin(unittest.TestCase):
         query = _AutoJoiner(dao._orm, dao.session.query(Stop), Agency.agency_name == 'FOOBAR').autojoin()
         self._check(query, ['stop_times', 'trips', 'routes', 'agency'])
 
-        query = _AutoJoiner(dao._orm, dao.session.query(Agency), (Stop.stop_name == 'FOOBAR') & (CalendarDate.date == '2016-01-01')).autojoin()
+        query = _AutoJoiner(dao._orm, dao.session.query(Agency),
+                            (Stop.stop_name == 'FOOBAR') & (CalendarDate.date == '2016-01-01')).autojoin()
         self._check(query, ['routes', 'trips', 'calendar', 'calendar_dates', 'stop_times', 'stops'])
 
-        query = _AutoJoiner(dao._orm, dao.session.query(Trip), (Route.route_long_name == 'FOOBAR') & (StopTime.departure_time > 2000) & (CalendarDate.date == '2016-01-01')).autojoin()
+        query = _AutoJoiner(dao._orm, dao.session.query(Trip),
+                            (Route.route_long_name == 'FOOBAR') & (StopTime.departure_time > 2000) & (
+                                        CalendarDate.date == '2016-01-01')).autojoin()
         self._check(query, ['calendar', 'calendar_dates', 'routes', 'stop_times'])
 
         query = _AutoJoiner(dao._orm, dao.session.query(Trip), Agency.agency_name == 'FOOBAR').autojoin()
@@ -76,6 +79,7 @@ class TestAutoJoin(unittest.TestCase):
         query_joins = re.findall("JOIN\s+([a-z_]+)", str(query))
         # print(query_joins)
         self.assertTrue(joins == query_joins)
+
 
 if __name__ == '__main__':
     unittest.main()

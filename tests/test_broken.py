@@ -56,8 +56,8 @@ class TestMiniGtfs(unittest.TestCase):
         self.assertTrue(len(dao.fare_rules()) == 4)
         # This stop has missing coordinates in the broken file
         stop00 = dao.stop('FUR_CREEK_RES3')
-        self.assertAlmostEquals(stop00.stop_lat, 0.0, 5)
-        self.assertAlmostEquals(stop00.stop_lon, 0.0, 5)
+        self.assertAlmostEqual(stop00.stop_lat, 0.0, 5)
+        self.assertAlmostEqual(stop00.stop_lon, 0.0, 5)
 
 
 if __name__ == '__main__':

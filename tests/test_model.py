@@ -32,7 +32,7 @@ class TestModel(unittest.TestCase):
         self.assertEqual(True, True)
         d1 = CalendarDate.ymd(2015, 12, 31)
         d2 = CalendarDate.ymd(2016, 1, 1)
-        self.assertEquals(d1.next_day(), d2)
+        self.assertEqual(d1.next_day(), d2)
         self.assertTrue(d1 < d2)
         self.assertTrue(d1 <= d2)
         self.assertFalse(d1 > d2)

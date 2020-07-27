@@ -125,9 +125,9 @@ class TestDummyGtfs(unittest.TestCase):
         z_inexistant = dao.zone("ZX")
         self.assertTrue(z_inexistant is None)
         z1 = dao.zone("Z1")
-        self.assertEquals(16, len(z1.stops))
+        self.assertEqual(16, len(z1.stops))
         z2 = dao.zone("Z2")
-        self.assertEquals(4, len(z2.stops))
+        self.assertEqual(4, len(z2.stops))
 
         # Check transfers
         transfers = dao.transfers()
