@@ -56,13 +56,15 @@ class LogPipe(threading.Thread):
         """
         os.close(self.fdWrite)
 
-def run_command(args: [], logger=None) -> bool:
+
+def run_command(args: [], logger=None) -> int:
     logpipe = LogPipe(logging.INFO, logger)
     # noinspection PyTypeChecker
+    _result = 0
+
     with subprocess.Popen(args, stdout=logpipe, stderr=logpipe) as s:
-        s.wait()
+        _result = s.wait()
         logpipe.close()
         logpipe.join()
 
-    return True
-
+    return _result

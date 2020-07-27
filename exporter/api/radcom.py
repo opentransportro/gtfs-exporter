@@ -3,7 +3,7 @@ import datetime
 
 import polyline
 from exporter.gtfs.dao import Dao
-from exporter.gtfs.model import FeedInfo, Route, Trip, Stop, StopTime, Shape, ShapePoint, Calendar, CalendarDate
+from exporter.gtfs.model import FeedInfo, Route, Trip, Stop, StopTime, Shape, ShapePoint, Calendar, CalendarDate, Agency
 
 from exporter.provider import ApiDataProvider
 from exporter.util.http import Request
@@ -11,6 +11,7 @@ from exporter.util.perf import measure_execution_time
 from exporter.util.spatial import DataNormalizer
 
 logger = logging.getLogger("gtfsexporter")
+
 
 class RadcomApiDataProvider(ApiDataProvider):
     def __init__(self, url: str, feed_id="", lenient=False, disable_normalization=False, **kwargs):
@@ -173,7 +174,7 @@ class RadcomApiDataProvider(ApiDataProvider):
 
         return switcher.get(type)
 
-    def _safe_bulk_insert(self,bulk):
+    def _safe_bulk_insert(self, bulk):
         """
         performs a safe bulk insert, that updates existing items
         or creates a new record if not found
@@ -189,7 +190,7 @@ class RadcomApiDataProvider(ApiDataProvider):
                 logger.error(f"An exception was meet in bulk insert:{e}")
                 self.dao.session.rollback()
 
-    def _safe_insert(self,record):
+    def _safe_insert(self, record):
         """
         performs a safe insert, that updates existing items
         or creates a new record if not found
@@ -204,3 +205,67 @@ class RadcomApiDataProvider(ApiDataProvider):
         self.dao.session.query(Trip).filter(Trip.service_id == self.service_id).delete(synchronize_session=False)
         self.dao.session.commit()
         logger.info(f"Successfully droped trips with service id: {self.service_id}")
+
+
+class BucharestApiDataProvider(RadcomApiDataProvider):
+    # base api url
+    BASE_URL = "https://info.stbsa.ro/rp/api"
+
+    def __init__(self, feed_id="", lenient=False, disable_normalization=False, **kwargs):
+        super().__init__(BucharestApiDataProvider.BASE_URL, feed_id, lenient, disable_normalization)
+        # Optional, generate empty feed info
+
+    def _load_agencies(self):
+        self.agency_ids = set()
+        logger.info("Importing agencies...")
+
+        stb = Agency(self.feed_id, 1, "STB SA", "https://stbsa.ro", "Europe/Bucharest", **{
+            "agency_lang": "ro",
+            "agency_email": "contact@stbsa.ro",
+            "agency_fare_url": "http://stbsa.ro/portofel_electronic.php",
+            "agency_phone": "0213110595"
+        })
+
+        metrorex = Agency(self.feed_id, 2, "METROREX SA", "https://metrorex.ro", "Europe/Bucharest",
+                          **{
+                              "agency_lang": "ro",
+                              "agency_email": "contact@metrorex.ro",
+                              "agency_fare_url": "http://metrorex.ro/titluri_de_calatorie_p1381-1",
+                              "agency_phone": "0213193601"
+                          })
+        self._safe_insert(stb)
+        self.agency_ids.add(stb.agency_id)
+
+        self._safe_insert(metrorex)
+        self.agency_ids.add(metrorex.agency_id)
+
+        self.dao.flush()
+        self.dao.commit()
+        logger.info("Imported %d agencies" % 2)
+
+
+class ConstantaApiDataProvider(RadcomApiDataProvider):
+    # base api url
+    BASE_URL = "https://info.ctbus.ro/rp/api"
+
+    def __init__(self, feed_id="", lenient=False, disable_normalization=False, **kwargs):
+        super().__init__(ConstantaApiDataProvider.BASE_URL, feed_id, lenient, disable_normalization, **kwargs)
+
+    def _load_agencies(self):
+        self.agency_ids = set()
+        logger.info("Importing agencies...")
+
+        stb = Agency(self.feed_id, 1, "Regia Autonomă de Transport în Comun Constanța", "https://ctbus.ro",
+                     "Europe/Bucharest", **{
+                "agency_lang": "ro",
+                "agency_email": "contact@ctbus.ro",
+                "agency_fare_url": "https://www.ctbus.ro/#Tarife",
+                "agency_phone": "0241694960"
+            })
+
+        self._safe_insert(stb)
+        self.agency_ids.add(stb.agency_id)
+
+        self.dao.flush()
+        self.dao.commit()
+        logger.info("Imported %d agencies" % 1)

@@ -12,17 +12,17 @@ from exporter.util.spatial import DataNormalizer
 
 logger = logging.getLogger("gtfsexporter")
 
-WINK_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.UGhnZDFrdndzWTFlUTRCd2pvbnVkR29pVG5ZQVROTDk.m9vK9qfiQtfx9_YyFrpfCRVEp6WFaRT8C_R65483d9o'
-
 
 class ClujApiDataProvider(ApiDataProvider):
+    WINK_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.UGhnZDFrdndzWTFlUTRCd2pvbnVkR29pVG5ZQVROTDk.m9vK9qfiQtfx9_YyFrpfCRVEp6WFaRT8C_R65483d9o'
+
     def __init__(self, feed_id="", lenient=False, disable_normalization=False, **kwargs):
         super().__init__(feed_id, lenient, disable_normalization)
         # Optional, generate empty feed info
         self.feedinfo = FeedInfo(self.feed_id)
 
         self.line_detail_request = Request("https://m-go.wink.ro/api" + "/route/all/{0}",
-                                           headers={'azza': WINK_TOKEN})
+                                           headers={'azza': ClujApiDataProvider.WINK_TOKEN})
         self.times_request = Request("http://www.ctpcj.ro/orare/csv/orar_{0}_{1}.csv",
                                      headers={'Referer': 'http://www.ctpcj.ro'},
                                      decoder=CsvDecoder())
@@ -170,6 +170,7 @@ class ClujApiDataProvider(ApiDataProvider):
 
             distance_traveled = math.floor(waypoint['total'])
 
+            first_departure_time = 0
             if waypoint_idx == 0:
                 departure_time = self.__convert_tsm(timepoint)
                 stop_time = StopTime(feed_id=self.feed_id,

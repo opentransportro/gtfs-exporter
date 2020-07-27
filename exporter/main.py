@@ -31,25 +31,19 @@ Examples:
 Authors:
 """
 import glob
-import logging
-import logging.handlers
 import os
-import shutil
 
 from docopt import docopt
-from environs import Env
 
-from exporter.settings import GH_REPO, GH_TOKEN
-
-from exporter import Exporter, __version__ as version, __temp_path__ as tmp_path, __output_path__ as out_path, \
-    __cwd_path__ as app_path, __map_path__ as map_path
-from exporter.api.builder import ProviderBuilder
+from exporter import Exporter, __version__ as version, __output_path__ as out_path
+from exporter.api import ApiBuilder
 from exporter.provider import DataProvider, FileDataProvider, HttpDataProvider
+from exporter.settings import GH_REPO, GH_TOKEN
+from exporter.util.logging import init_logging
 from exporter.util.perf import measure_execution_time
 from exporter.util.spatial import ShapeGenerator
-from exporter.vcs.github import ReleaseGenerator
 from exporter.util.storage import init_filesystem
-from exporter.util.logging import init_logging
+from exporter.vcs.github import ReleaseGenerator
 
 
 @measure_execution_time
@@ -71,10 +65,10 @@ def main():
                                     lenient=arguments['--lenient'],
                                     disable_normalization=arguments['--disablenormalize'])
     elif provider_type == "api":
-        builder = ProviderBuilder(arguments['--url'],
-                                  feed_id=arguments['--id'],
-                                  lenient=arguments['--lenient'],
-                                  disable_normalization=arguments['--disablenormalize'])
+        builder = ApiBuilder(arguments['--url'],
+                             feed_id=arguments['--id'],
+                             lenient=arguments['--lenient'],
+                             disable_normalization=arguments['--disablenormalize'])
         provider = builder.build()
 
     exporter = Exporter(arguments)
@@ -109,6 +103,7 @@ def main():
     rg.generate([
                     os.path.join(out_path, f"gtfs-{arguments['--id']}.zip"),
                 ] + glob.glob(os.path.join(out_path, "*.json")))
+
 
 if __name__ == '__main__':
     main()

@@ -1,17 +1,14 @@
+import logging
 import os
+import shutil
 import stat
 import time
 import zipfile
-import logging
-import shutil
 
 import six
 
-
-from exporter import __version__ as version, __temp_path__ as tmp_path, __output_path__ as out_path, \
-    __cwd_path__ as app_path, __map_path__ as map_path
-
-
+from exporter import __temp_path__ as tmp_path, __output_path__ as out_path, \
+    __map_path__ as map_path
 
 logger = logging.getLogger('gtfsexporter')
 

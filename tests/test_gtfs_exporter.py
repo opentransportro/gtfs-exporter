@@ -2,7 +2,7 @@ import unittest
 
 from exporter import __version__
 from exporter.api.brasov import midnight_today
-from exporter.api.builder import ProviderBuilder
+from exporter.api import ApiBuilder
 
 
 class TestGtfsExporter(unittest.TestCase):
@@ -25,10 +25,10 @@ class TestGtfsExporter(unittest.TestCase):
         assert midnight.microsecond == 0
 
     def test_provider_builder(self):
-        builder = ProviderBuilder("unknown", f"unknown-feed")
+        builder = ApiBuilder("unknown", f"unknown-feed")
         assert builder.build() is None
 
         for provider_key in ["bucharest", "constanta", "cluj", "brasov", "iasi"]:
-            builder = ProviderBuilder(provider_key, f"{provider_key}-feed")
+            builder = ApiBuilder(provider_key, f"{provider_key}-feed")
             provider = builder.build()
             assert provider is not None
