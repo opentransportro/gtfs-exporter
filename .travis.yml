@@ -18,6 +18,7 @@ jobs:
         - pip install poetry
       install:
         - poetry install
+        - poetry export -f requirements.txt -o requirements.txt
       script: pytest
 
     # build container
