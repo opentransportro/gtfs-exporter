@@ -3,10 +3,10 @@ import logging
 import math
 
 import pyosrm
-
-from gtfslib.dao import Dao
-from gtfslib.model import Agency, FeedInfo, Calendar, CalendarDate, Route, Shape, ShapePoint, Stop, Trip, StopTime
 from pyosrm import Status
+
+from exporter.gtfs.dao import Dao
+from exporter.gtfs.model import Agency, FeedInfo, Calendar, CalendarDate, Route, Shape, ShapePoint, Stop, Trip, StopTime
 
 from exporter.provider import ApiDataProvider
 from exporter.util.http import Request, CsvDecoder
