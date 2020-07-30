@@ -2,8 +2,11 @@ import datetime as datetime
 import logging
 import math
 
-from exporter.gtfs.dao import Dao
-from exporter.gtfs.model import Agency, FeedInfo, Calendar, CalendarDate, Route, Shape, ShapePoint, Stop, Trip, StopTime
+import pyosrm
+
+from gtfslib.dao import Dao
+from gtfslib.model import Agency, FeedInfo, Calendar, CalendarDate, Route, Shape, ShapePoint, Stop, Trip, StopTime
+from pyosrm import Status
 
 from exporter.provider import ApiDataProvider
 from exporter.util.http import Request, CsvDecoder
@@ -26,6 +29,8 @@ class ClujApiDataProvider(ApiDataProvider):
         self.times_request = Request("http://www.ctpcj.ro/orare/csv/orar_{0}_{1}.csv",
                                      headers={'Referer': 'http://www.ctpcj.ro'},
                                      decoder=CsvDecoder())
+
+        self.router = pyosrm.PyOSRM("map/romania-latest.osrm")
 
     @measure_execution_time
     def load_data_source(self, dao: Dao) -> bool:
@@ -120,21 +125,24 @@ class ClujApiDataProvider(ApiDataProvider):
         shape_in = self.__process_shape(route, 0, way_coordinates)
         shape_out = self.__process_shape(route, 1, round_way_coordinates)
 
+        trip_duration = self.__compute_trip_duration(waypoints)
+        round_trip_duration = self.__compute_trip_duration(round_waypoints)
+
         is_route_supported = True
 
         for service_id in self.service_ids:
             in_times, out_times = self.__load_timetables(route, service_id)
 
             if len(in_times) > 0:
-                self.__process_trips(route, shape_in, 0, waypoints, in_times, service_id)
+                self.__process_trips(route, shape_in, 0, waypoints, in_times, trip_duration, service_id)
                 is_route_supported = True
             if len(out_times) > 0:
-                self.__process_trips(route, shape_out, 1, round_waypoints, out_times, service_id)
+                self.__process_trips(route, shape_out, 1, round_waypoints, out_times, round_trip_duration, service_id)
                 is_route_supported = True
 
         return is_route_supported
 
-    def __process_trips(self, route, shape, direction, waypoints, timepoints, service_id):
+    def __process_trips(self, route, shape, direction, waypoints, timepoints, trip_duration, service_id):
         logger.debug(f"total stops to process {len(waypoints)}")
 
         for timepoint_idx, timepoint in enumerate(timepoints):
@@ -151,11 +159,11 @@ class ClujApiDataProvider(ApiDataProvider):
                            }
                         )
 
-            self.__process_stops_and_times(trip, timepoint, waypoints)
+            self.__process_stops_and_times(trip, timepoint, waypoints, trip_duration)
 
             self.dao.add(trip)
 
-    def __process_stops_and_times(self, trip, timepoint, waypoints):
+    def __process_stops_and_times(self, trip, timepoint, waypoints, trip_duration):
         filtered_waypoints = [x for x in waypoints if x['name']]
         for waypoint_idx, waypoint in enumerate(filtered_waypoints):
             stop = Stop(self.feed_id,
@@ -170,7 +178,6 @@ class ClujApiDataProvider(ApiDataProvider):
 
             distance_traveled = math.floor(waypoint['total'])
 
-            first_departure_time = 0
             if waypoint_idx == 0:
                 departure_time = self.__convert_tsm(timepoint)
                 stop_time = StopTime(feed_id=self.feed_id,
@@ -183,8 +190,7 @@ class ClujApiDataProvider(ApiDataProvider):
                                      timepoint=1)
                 first_departure_time = departure_time
             elif waypoint_idx == (len(filtered_waypoints) - 1):
-                delta_time = self.__process_time_for_distance(waypoint['total'])
-                end_time = int(delta_time + first_departure_time)
+                end_time = int(trip_duration + first_departure_time)
                 stop_time = StopTime(feed_id=self.feed_id,
                                      trip_id=trip.trip_id,
                                      stop_id=stop.stop_id,
@@ -240,11 +246,19 @@ class ClujApiDataProvider(ApiDataProvider):
 
         return [x for x in in_times if x], [x for x in out_times if x]
 
-    @staticmethod
-    def __process_time_for_distance(distance) -> int:
-        # 15 km / h = 15000 m / 3600 s = 4.1 m / s
-        average_speed = 4.1
-        return int(distance / average_speed)
+    def __compute_trip_duration(self, waypoints):
+        coords = list(map(lambda waypoint: [waypoint['lng'], waypoint['lat']], waypoints))
+
+        result = self.router.route(coords)
+
+        if result.status == Status.Ok:
+            routes = result.json()['routes']
+            if len(routes) > 0:
+                # Add an overhead for every stop loading/unloading
+                stop_service_overhead = len(waypoints) * 5
+                return routes[0]['duration'] + stop_service_overhead
+
+        return 0
 
     @staticmethod
     def __parse_route_type(route_type_literal: str):
