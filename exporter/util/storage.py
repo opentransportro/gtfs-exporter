@@ -13,12 +13,13 @@ from exporter import __temp_path__ as tmp_path, __output_path__ as out_path, \
 logger = logging.getLogger('gtfsexporter')
 
 
-def create_folder(folder: str):
+def create_folder(folder: str, forced: bool = False):
     try:
-        logger.info(f" - creating {folder}")
-        if os.path.exists(folder):
-            shutil.rmtree(folder)
-        os.mkdir(folder)
+        if not os.path.exists(folder) or forced:
+            logger.info(f" - creating {folder}")
+            if forced:
+                logger.info(f" - creating {folder}")
+            os.mkdir(folder)
     except:
         pass
 
