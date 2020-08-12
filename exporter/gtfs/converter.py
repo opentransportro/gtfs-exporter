@@ -210,7 +210,7 @@ class _Odometer(object):
 
 
 @timing
-def _convert_gtfs_model(feed_id, gtfs, dao, lenient=False, disable_normalization=False):
+def _convert_gtfs_model(feed_id, gtfs, dao, lenient=False, disable_normalization=True):
     feedinfo2 = None
     logger.info("Importing feed ID '%s'" % feed_id)
     n_feedinfo = 0

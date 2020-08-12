@@ -12,6 +12,7 @@ from exporter import __temp_path__ as tmp_path, __output_path__ as out_path, \
 
 logger = logging.getLogger('gtfsexporter')
 
+
 def create_folder(folder: str):
     try:
         logger.info(f" - creating {folder}")

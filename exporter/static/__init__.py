@@ -6,7 +6,7 @@ Usage:
   gtfs-exporter (-h | --help)
   gtfs-exporter --version
 Options:
-  --provider=<provider> The provider type. Can be file, url or api.
+  --provider=<provider> The provider type. Can be file, url or providers.
   --url=<url>
   --file=<file>
   --delete             Delete feed.
@@ -31,19 +31,100 @@ Examples:
 Authors:
 """
 import glob
+import logging
 import os
 
 from docopt import docopt
 
-from exporter import Exporter, __version__ as version, __output_path__ as out_path
-from exporter.api import ApiBuilder
-from exporter.provider import DataProvider, FileDataProvider, HttpDataProvider
+from exporter import __version__ as version, __output_path__ as out_path, __cwd_path__ as cwd_path
+from exporter.gtfs.dao import Dao
+from exporter.gtfs.model import Route
+from exporter.static.processor import Processor
+from exporter.static.providers import ApiProviderBuilder
+from exporter.static.providers import DataProvider, FileDataProvider, HttpDataProvider
 from exporter.settings import GH_REPO, GH_TOKEN
 from exporter.util.logging import init_logging
 from exporter.util.perf import measure_execution_time
 from exporter.util.spatial import ShapeGenerator
 from exporter.util.storage import init_filesystem
 from exporter.vcs.github import ReleaseGenerator
+from exporter.writer import Context, Writer
+
+
+class StaticExporter:
+    def __init__(self, arguments):
+        self.logger = logging.getLogger('gtfsexporter')
+        self._arguments = arguments
+
+        if arguments['--id'] is None:
+            arguments['--id'] = "default"
+
+        database_path = os.path.join(cwd_path, arguments['--id'] + ".sqlite")
+
+        self._dao = Dao(database_path, sql_logging=arguments['--logsql'], schema=arguments['--schema'])
+
+        if arguments['--list']:
+            for feed in self._dao.feeds():
+                print(feed.feed_id if feed.feed_id != "" else "(default)")
+
+        if arguments['--delete']:
+            feed_id = arguments['--id']
+            existing_feed = self._dao.feed(feed_id)
+            if existing_feed:
+                self.logger.warning("Deleting existing feed ID '%s'" % feed_id)
+                self._dao.delete_feed(feed_id)
+                self._dao.commit()
+
+    @property
+    def dao(self):
+        return self._dao
+
+    def load(self, provider: DataProvider):
+        self.logger.info("Importing data from provided source")
+        provider.load_data_source(self._dao)
+
+    def process(self, processor: Processor = None):
+        self.logger.info("Processing data from provided source")
+
+        # Here we should use a rule providers to have more flexibility when processing data
+        # providers.process(ruleset)
+
+        for route in self._dao.routes():
+            print("updating route [%s] setting correct color" % route.route_long_name)
+
+            route.route_text_color = "FFFFFF"
+
+            if route.route_type == Route.TYPE_BUS:
+                route.route_color = "195BAD"
+            elif route.route_type == Route.TYPE_TRAM:
+                route.route_color = "FFAD33"
+            elif route.route_type == Route.TYPE_RAIL:
+                route.route_color = "FF5B33"
+            elif route.route_type == Route.TYPE_CABLECAR:
+                route.route_color = "FF8433"
+            elif route.route_type == Route.TYPE_SUBWAY:
+                route.route_color = "D13333"
+            elif route.route_type == Route.TYPE_FERRY:
+                route.route_color = "62A9DD"
+
+        self._dao.commit()
+
+    def export(self, bundle = False, out_path: str = out_path) -> str:
+        self.logger.info(f"Generating archive with name gtfs-{self._arguments['--id']}.zip")
+
+        class __Args:
+            filter = None
+
+        context = Context(self._dao, __Args(), out_path)
+
+        if bundle:
+            w = Writer(context, bundle=f"gtfs-{self._arguments['--id']}.zip")
+        else:
+            w = Writer(context)
+
+        w.run()
+
+        return out_path
 
 
 @measure_execution_time
@@ -64,17 +145,18 @@ def main():
                                     feed_id=arguments['--id'],
                                     lenient=arguments['--lenient'],
                                     disable_normalization=arguments['--disablenormalize'])
-    elif provider_type == "api":
-        builder = ApiBuilder(arguments['--url'],
+    elif provider_type == "providers":
+        builder = ApiProviderBuilder(arguments['--url'],
                              feed_id=arguments['--id'],
                              lenient=arguments['--lenient'],
                              disable_normalization=arguments['--disablenormalize'])
         provider = builder.build()
 
-    exporter = Exporter(arguments)
+    exporter = StaticExporter(arguments)
+    # exporter.addProcessor()
     sg = ShapeGenerator("https://download.geofabrik.de/europe/romania-latest.osm.bz2", out_path)
 
-    # flow needs to be different when receiving data from api
+    # flow needs to be different when receiving data from providers
     #  - load
     #  - process
     #  - generate initial gtfs files

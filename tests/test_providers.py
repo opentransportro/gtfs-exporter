@@ -5,8 +5,8 @@ from unittest import mock
 
 from sqlalchemy.orm import clear_mappers
 
-from exporter.api.brasov import BrasovApiDataProvider
-from exporter.api.radcom import RadcomApiDataProvider
+from exporter.static.providers import BrasovApiDataProvider
+from exporter.static.providers import RadcomApiDataProvider
 from exporter.gtfs.dao import Dao
 
 base_path = dirname(abspath(__file__))
@@ -49,7 +49,7 @@ class TestProviders(unittest.TestCase):
         clear_mappers()
         self.dao_object = Dao()
 
-    @mock.patch("exporter.api.radcom.Request")
+    @mock.patch("exporter.static.providers.Request")
     def test_radcom_provider(self, mocked_request):
         mocked_request.side_effect = _request_mock
         radcomProvider = RadcomApiDataProvider("", feed_id="1")

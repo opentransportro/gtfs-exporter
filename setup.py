@@ -33,7 +33,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'gtfs-process=exporter.main:main',
+            'gtfs-process=exporter.static:main',
         ],
     },
 )

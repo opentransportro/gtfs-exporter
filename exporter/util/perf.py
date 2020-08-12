@@ -1,5 +1,6 @@
 import logging
 import os
+import shutil
 import subprocess
 import threading
 import time
@@ -56,6 +57,12 @@ class LogPipe(threading.Thread):
         """
         os.close(self.fdWrite)
 
+
+def check_utility(utility: str):
+    logger = logging.getLogger('main-logger')
+    if shutil.which(utility) is None:
+        logger.error(f"no {utility} support, please install {utility} on your machine")
+        exit(1)
 
 def run_command(args: [], logger=None) -> int:
     logpipe = LogPipe(logging.INFO, logger)
