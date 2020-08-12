@@ -26,8 +26,8 @@ def create_folder(folder: str, forced: bool = False):
 
 def init_filesystem():
     logger.info("creating work directories if not exist")
-    create_folder(out_path)
-    create_folder(tmp_path)
+    create_folder(out_path, forced=True)
+    create_folder(tmp_path, forced=True)
     create_folder(map_path)
 
 
