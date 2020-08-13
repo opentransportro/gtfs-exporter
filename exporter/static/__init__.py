@@ -9,8 +9,6 @@ Options:
   --provider=<provider> The provider type. Can be file, url or providers.
   --url=<url>
   --file=<file>
-  --delete             Delete feed.
-  --list               List all feeds.
   --id=<id>            Set the feed ID in case multiple GTFS are to be loaded.
   -h --help            Show help on options.
   --version            Show lib / program version.
@@ -39,7 +37,7 @@ from docopt import docopt
 from exporter import __version__ as version, __output_path__ as out_path, __cwd_path__ as cwd_path
 from exporter.gtfs.dao import Dao
 from exporter.gtfs.model import Route
-from exporter.static.processor import Processor
+from exporter.static.processors import Processor
 from exporter.static.providers import ApiProviderBuilder
 from exporter.static.providers import DataProvider, FileDataProvider, HttpDataProvider
 from exporter.settings import GH_REPO, GH_TOKEN
@@ -62,18 +60,6 @@ class StaticExporter:
         database_path = os.path.join(cwd_path, arguments['--id'] + ".sqlite")
 
         self._dao = Dao(database_path, sql_logging=arguments['--logsql'], schema=arguments['--schema'])
-
-        if arguments['--list']:
-            for feed in self._dao.feeds():
-                print(feed.feed_id if feed.feed_id != "" else "(default)")
-
-        if arguments['--delete']:
-            feed_id = arguments['--id']
-            existing_feed = self._dao.feed(feed_id)
-            if existing_feed:
-                self.logger.warning("Deleting existing feed ID '%s'" % feed_id)
-                self._dao.delete_feed(feed_id)
-                self._dao.commit()
 
     @property
     def dao(self):

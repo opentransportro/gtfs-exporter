@@ -9,7 +9,7 @@ class TestGtfsExporter(unittest.TestCase):
         pass
 
     def test_version(self):
-        assert __version__ == "1.0.0"
+        assert __version__ == "1.1.0"
 
     def test_midnight(self):
         midnight = BrasovApiDataProvider.midnight_today("Europe/Bucharest")
