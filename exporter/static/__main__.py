@@ -131,7 +131,7 @@ def main():
                                     feed_id=arguments['--id'],
                                     lenient=arguments['--lenient'],
                                     disable_normalization=arguments['--disablenormalize'])
-    elif provider_type == "providers":
+    elif provider_type == "api":
         builder = ApiProviderBuilder(arguments['--url'],
                              feed_id=arguments['--id'],
                              lenient=arguments['--lenient'],
