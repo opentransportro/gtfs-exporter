@@ -58,7 +58,7 @@
                 "--provider=api",
                 "--url=cluj",
                 "--id=cluj",
-                "--processor='stop_time'"
+                "--processors=stop_time,route_color"
             ]
         }
     ]

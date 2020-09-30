@@ -459,7 +459,7 @@ class ClujApiDataProvider(ApiDataProvider):
         self.stops = set()
 
         # The API offers a paging-like mechanism to fetch routes
-        for page in range(0, 12):
+        for page in range(0, 1):
             line_data = self.line_detail_request(str(page))['data']
             if line_data:
                 line_total = len(line_data)

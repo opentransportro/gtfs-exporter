@@ -38,7 +38,7 @@ from docopt import docopt
 from exporter import __version__ as version, __output_path__ as out_path, __cwd_path__ as cwd_path
 from exporter.gtfs.dao import Dao
 from exporter.gtfs.model import Route
-from exporter.static.processors import Processor, OSRMTimeProcessor
+from exporter.static.processors import Processor, OSRMTimeProcessor, RouteColorProcessor
 from exporter.static.providers import ApiProviderBuilder
 from exporter.static.providers import DataProvider, FileDataProvider, HttpDataProvider
 from exporter.settings import GH_REPO, GH_TOKEN
@@ -71,29 +71,11 @@ class StaticExporter:
         self.logger.info("Importing data from provided source")
         provider.load_data_source(self._dao)
 
-    def process(self, processor: Processor = None):
-        self.logger.info("Processing data from provided source")
+    def process(self, processors: [Processor] = []):
+        self.logger.info("Applying processors on the obtained dataset")
 
-        # Here we should use a rule providers to have more flexibility when processing data
-        # processors.process(ruleset)
-
-        for route in self._dao.routes():
-            print("updating route [%s] setting correct color" % route.route_long_name)
-
-            route.route_text_color = "FFFFFF"
-
-            if route.route_type == Route.TYPE_BUS:
-                route.route_color = "195BAD"
-            elif route.route_type == Route.TYPE_TRAM:
-                route.route_color = "FFAD33"
-            elif route.route_type == Route.TYPE_RAIL:
-                route.route_color = "FF5B33"
-            elif route.route_type == Route.TYPE_CABLECAR:
-                route.route_color = "FF8433"
-            elif route.route_type == Route.TYPE_SUBWAY:
-                route.route_color = "D13333"
-            elif route.route_type == Route.TYPE_FERRY:
-                route.route_color = "62A9DD"
+        for processor in processors:
+            processor.process(self._dao)
 
         self._dao.commit()
 
@@ -119,10 +101,13 @@ class ProcessorArgsParser:
     def __init__(self, argument):
         self._processors = list()
 
-        parsed_processors = argument.replace('\'', '').split(',')
+        parsed_processors = argument.replace(' ', '').split(',')
 
         if 'stop_time' in parsed_processors:
             self._processors.append(OSRMTimeProcessor())
+
+        if 'route_color' in parsed_processors:
+            self._processors.append(RouteColorProcessor())
 
 
     def get_all(self):
@@ -158,10 +143,10 @@ def main():
     
     sg = ShapeGenerator("https://download.geofabrik.de/europe/romania-latest.osm.bz2", out_path)
 
+    processors = []
     if arguments['--processors'] is not None:
         processors_parser = ProcessorArgsParser(arguments['--processors'])
-        for processor in processors_parser.get_all():
-            exporter.process(processor=processor)
+        processors = processors_parser.get_all()
 
     # flow needs to be different when receiving data from providers
     #  - load
@@ -175,7 +160,7 @@ def main():
     #  - generate feed (bundle)
     if provider.is_from_api():
         exporter.load(provider)
-        exporter.process()
+        exporter.process(processors=processors)
 
         exporter.export(bundle=False)
 
@@ -185,11 +170,8 @@ def main():
     else:
         sg.generate()
         exporter.load(provider)
-        exporter.process()
+        exporter.process(processors=processors)
         exporter.export(bundle=True)
-
-    
-
 
     rg = ReleaseGenerator(GH_REPO, GH_TOKEN)
 

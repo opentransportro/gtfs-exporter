@@ -16,13 +16,8 @@ class Processor:
 
 class RouteColorProcessor(Processor):
     def process(self, dao: Dao):
-        logger.info("Processing data from provided source")
-
-        # Here we should use a rule providers to have more flexibility when processing data
-        # providers.process(ruleset)
-
         for route in dao.routes():
-            print("updating route [%s] setting correct color" % route.route_long_name)
+            logger.info("updating route [%s] setting correct color" % route.route_long_name)
 
             route.route_text_color = "FFFFFF"
 
