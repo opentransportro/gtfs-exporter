@@ -1,24 +1,25 @@
 """gtfs-exporter - GTFS to GTFS' conversion tool and database loader
 Usage:
-  gtfs-exporter (--provider=<provider> | --delete | --list ) [--url=<url>] [--file=<file>] [--id=<id>]
+  gtfs-exporter (--provider=<provider> | --delete | --list ) [--url=<url>] [--file=<file>] [--id=<id>] [--processors=<processors>]
                         [--logsql] [--lenient] [--schema=<schema>]
                         [--disablenormalize]
   gtfs-exporter (-h | --help)
   gtfs-exporter --version
 Options:
-  --provider=<provider> The provider type. Can be file, url or providers.
+  --provider=<provider>         The provider type. Can be file, url or providers.
   --url=<url>
   --file=<file>
-  --id=<id>            Set the feed ID in case multiple GTFS are to be loaded.
-  -h --help            Show help on options.
-  --version            Show lib / program version.
-  --logsql             Enable SQL logging (very verbose)
-  --lenient            Allow some level of brokenness in GTFS input.
-  --schema=<schema>    Set the schema to use (for PostgreSQL).
-  --disablenormalize   Disable shape and stop times normalization. Be careful
-                       if you use this option, as missing stop times will not
-                       be interpolated, and shape_dist_traveled will not be
-                       computed or converted to meters.
+  --id=<id>                     Set the feed ID in case multiple GTFS are to be loaded.
+  --processors=<processors>     The list of processors as the following: 'processorA, processorB, ...'.
+  -h --help                     Show help on options.
+  --version                     Show lib / program version.
+  --logsql                      Enable SQL logging (very verbose)
+  --lenient                     Allow some level of brokenness in GTFS input.
+  --schema=<schema>             Set the schema to use (for PostgreSQL).
+  --disablenormalize            Disable shape and stop times normalization. Be careful
+                                if you use this option, as missing stop times will not
+                                be interpolated, and shape_dist_traveled will not be
+                                computed or converted to meters.
 Examples:
   gtfs-exporter --provider=url --url=https://api.opentransport.ro/gtfs/v1/static --id=timisoara
         Load GTFS from url using id "sncf", deleting previous data.
@@ -37,7 +38,7 @@ from docopt import docopt
 from exporter import __version__ as version, __output_path__ as out_path, __cwd_path__ as cwd_path
 from exporter.gtfs.dao import Dao
 from exporter.gtfs.model import Route
-from exporter.static.processors import Processor
+from exporter.static.processors import Processor, OSRMTimeProcessor
 from exporter.static.providers import ApiProviderBuilder
 from exporter.static.providers import DataProvider, FileDataProvider, HttpDataProvider
 from exporter.settings import GH_REPO, GH_TOKEN
@@ -61,6 +62,7 @@ class StaticExporter:
 
         self._dao = Dao(database_path, sql_logging=arguments['--logsql'], schema=arguments['--schema'])
 
+
     @property
     def dao(self):
         return self._dao
@@ -73,7 +75,7 @@ class StaticExporter:
         self.logger.info("Processing data from provided source")
 
         # Here we should use a rule providers to have more flexibility when processing data
-        # providers.process(ruleset)
+        # processors.process(ruleset)
 
         for route in self._dao.routes():
             print("updating route [%s] setting correct color" % route.route_long_name)
@@ -113,6 +115,20 @@ class StaticExporter:
         return out_path
 
 
+class ProcessorArgsParser:
+    def __init__(self, argument):
+        self._processors = list()
+
+        parsed_processors = argument.replace('\'', '').split(',')
+
+        if 'stop_time' in parsed_processors:
+            self._processors.append(OSRMTimeProcessor())
+
+
+    def get_all(self):
+        return self._processors
+
+
 @measure_execution_time
 def main():
     init_logging()
@@ -139,8 +155,13 @@ def main():
         provider = builder.build()
 
     exporter = StaticExporter(arguments)
-    # exporter.addProcessor()
+    
     sg = ShapeGenerator("https://download.geofabrik.de/europe/romania-latest.osm.bz2", out_path)
+
+    if arguments['--processors'] is not None:
+        processors_parser = ProcessorArgsParser(arguments['--processors'])
+        for processor in processors_parser.get_all():
+            exporter.process(processor=processor)
 
     # flow needs to be different when receiving data from providers
     #  - load
@@ -155,6 +176,7 @@ def main():
     if provider.is_from_api():
         exporter.load(provider)
         exporter.process()
+
         exporter.export(bundle=False)
 
         sg.generate()
@@ -165,6 +187,9 @@ def main():
         exporter.load(provider)
         exporter.process()
         exporter.export(bundle=True)
+
+    
+
 
     rg = ReleaseGenerator(GH_REPO, GH_TOKEN)
 

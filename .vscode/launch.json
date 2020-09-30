@@ -57,7 +57,8 @@
             "args": [
                 "--provider=api",
                 "--url=cluj",
-                "--id=cluj"
+                "--id=cluj",
+                "--processor='stop_time'"
             ]
         }
     ]
