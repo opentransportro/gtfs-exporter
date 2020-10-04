@@ -6,6 +6,8 @@ from exporter.util.perf import run_command, check_utility
 from exporter import __map_path__
 from exporter.util.storage import file_age_in_seconds
 
+from exporter.util.http import Request
+
 logger = logging.getLogger("gtfsexporter")
 
 
@@ -112,4 +114,53 @@ class OSRMTimeProcessor(Processor):
         run_command(["docker", "stop", "osrm"])
 
     def process(self, dao: Dao):
-        pass
+        for route in dao.routes():
+            # use the first trip as time template to improve overall performance
+            if len(route.trips) > 0:
+                self.__process_trips_per_direction(route, 0)
+                self.__process_trips_per_direction(route, 1)
+                
+        dao.commit()
+
+    def __process_trips_per_direction(self, route, direction_id):
+        trip_template = next(trip for trip in route.trips if trip.direction_id == direction_id)
+        trip_template_coords = []
+        trip_template_times = []
+
+        for idx, stop_time in enumerate(trip_template.stop_times, start=0):
+            trip_template_coords.append([stop_time.stop.stop_lon, stop_time.stop.stop_lat])
+            if idx == 0:
+                trip_template_times.append(0)    
+            else:
+                trip_template_times.append(self.__compute_osrm_time(trip_template_coords))
+
+        for trip in filter(lambda trip: trip.direction_id == direction_id, route.trips):
+            for idx, stop_time in enumerate(trip.stop_times, start=0):
+                if idx == 0:
+                    pass
+                else:
+                    stop_time.departure_time = trip_template_times[idx] + trip.stop_times[0].departure_time
+
+
+    def __compute_osrm_time(self, coords_sequence):
+        request = Request("http://localhost:5000/route/v1/car/{0}")
+        response = request(self.__to_osrm_literal_coordinates(coords_sequence))
+
+        if response and response['code'] == 'Ok':
+            routes = response['routes']
+            if len(routes) > 0:
+                # Add an overhead for every stop loading/unloading
+                stop_service_overhead = len(coords_sequence) * 3
+                return routes[0]['duration'] + stop_service_overhead
+
+        return 0
+
+    def __to_osrm_literal_coordinates(self, coords_sequence): 
+        formatted_coords = ''
+        for i in range(len(coords_sequence)):
+            formatted_coords += str(coords_sequence[i][0]) + ',' + str(coords_sequence[i][1])
+            if i < len(coords_sequence) - 1:
+                formatted_coords += ';'
+        
+        return formatted_coords
+
