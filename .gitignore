@@ -15,5 +15,4 @@ out
 .DS_Store
 .venv
 exporter/.DS_Store
-requirements.txt
 !tests/data/gtfs/*.zip

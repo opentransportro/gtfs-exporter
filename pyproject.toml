@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "gtfs-exporter"
+name = "exporter"
 version = "0.1.0"
 description = ""
 authors = ["Vlad Vesa <vlad@opentransport.ro>", "Claudiu Groza <claudiu@opentransport.ro>", "Mihai Balint <mihai@opentransport.ro>"]
