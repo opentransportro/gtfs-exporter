@@ -22,11 +22,26 @@ setup(
         'Intended Audience :: Developers',
         'Topic :: Scientific/Engineering :: GIS',
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
-        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
     ],
     keywords='GTFS transit exporter',
     packages=find_packages(),
-    install_requires=['clint', 'pandas', 'pygithub', 'environs', 'polyline', 'ratelimit', 'sqlalchemy', 'six', 'docopt', 'requests', 'pyqtree', 'pyshp'],
+    install_requires=[
+        "python>=3.7"
+        "requests==2.23.*"
+        "polyline==1.4.*"
+        "PyGithub==1.51.*"
+        "docopt==0.6.*"
+        "environs==7.4.*"
+        "clint==0.5.1"
+        "ratelimit==2.2.1"
+        "pandas==1.0.3"
+        "dateutils==0.6.8"
+        "sqlalchemy==1.3.18"
+        "six==1.15.0"
+        "pyshp==2.1.0"
+        "pyqtree==1.0.0"
+    ],
     extras_require={
         'dev': ['check-manifest'],
         'test': ['coverage'],

@@ -13,8 +13,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+      - name: Unit Tests
+        run: |
+          pip install poetry
+          poetry install
+          poetry export -f requirements.txt -o requirements.txt
+          pytest
       - name: Build docker image from master and push it
         run: ./.github/workflows/scripts/build_and_push_dev.sh
         env:
           DOCKER_USER: ${{ secrets.DOCKER_USER }}
           DOCKER_AUTH: ${{ secrets.DOCKER_AUTH }}
+      - name: Integration test
+        run: docker run --rm opentransport/gtfs-exporter  gtfs-process --provider=url --url=https://tursib.ro/trasee/gtfs --id=test
