@@ -12,8 +12,6 @@ DOCKER_IMAGE_TAG_LONG=$DOCKER_IMAGE:$DOCKER_TAG_LONG
 
 # Build image
 echo Building OTP
-docker build --tag="$DOCKER_IMAGE:builder" -f Dockerfile.builder .
-docker run --rm --entrypoint tar "$DOCKER_IMAGE:builder" -c target|tar x -C ./
 docker build --tag="$DOCKER_IMAGE_TAG_LONG" -f Dockerfile .
 
 docker login -u $DOCKER_USER -p $DOCKER_AUTH
