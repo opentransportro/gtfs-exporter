@@ -7,7 +7,7 @@ on:
     branches:
       - master
 jobs:
-  docker-push:
+  test:
     if: github.ref == 'refs/heads/master'
     strategy:
       fail-fast: false
@@ -30,6 +30,9 @@ jobs:
         run: |
           poetry install
           poetry run py.test
+  docker-push:
+    runs-on: ubuntu-latest
+    steps:
       - name: Build docker image from master and push it
         run: ./.github/workflows/scripts/build_and_push_dev.sh
         env:

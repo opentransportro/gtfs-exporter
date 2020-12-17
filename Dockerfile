@@ -11,4 +11,4 @@ VOLUME ${WORK}/map
 RUN apt update && apt install -y python3 python3-pip
 RUN rm -rf /var/lib/apt/lists/*
 ADD . ${WORK}
-RUN cd ${WORK} && pip install -r requirements.txt && python3 setup.py install
+RUN cd ${WORK} && pip3 install -r requirements.txt && python3 setup.py install
