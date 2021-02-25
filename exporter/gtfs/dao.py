@@ -72,6 +72,9 @@ class Dao(object):
     def add(self, obj):
         self._session.add(obj)
 
+    def update(self, obj):
+        self._session.merge(obj)
+
     def add_all(self, objs):
         self._session.add_all(objs)
 

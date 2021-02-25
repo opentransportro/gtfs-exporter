@@ -23,8 +23,6 @@ class RadcomApiDataProvider(ApiDataProvider):
         self.line_detail_request = Request(url + "/lines/{0}/direction/{1}")
         self.line_stops_request = Request(url + "/lines/{0}/stops/{1}")
 
-        self.service_id = "LV" if datetime.datetime.today().weekday() < 5 else "SD"
-
     @measure_execution_time
     def load_data_source(self, dao: Dao) -> bool:
         self.dao = dao
@@ -47,21 +45,13 @@ class RadcomApiDataProvider(ApiDataProvider):
 
         def save_calendar_for(service_id: str, dow: []):
             service = Calendar(self.feed_id, service_id)
-            dates = []
-            for d in CalendarDate.range(start_date, end_date.next_day()):
-                if dow[d.dow()] == 1:
-                    d.service_id = service.service_id
-                    d.feed_id = self.feed_id
-
-                    # add to list to be saved
-                    dates.append(d)
-
-            self._safe_insert(service)
-            self._safe_bulk_insert(dates)
+            self.dao.update(service)
             self.dao.flush()
 
         save_calendar_for("LV", [1, 1, 1, 1, 1, 0, 0])
         save_calendar_for("SD", [0, 0, 0, 0, 0, 1, 1])
+                
+        self.service_id = "LV" if datetime.datetime.today().weekday() < 5 else "SD"
 
     def _load_routes(self):
         self._clear_trips()
@@ -71,8 +61,7 @@ class RadcomApiDataProvider(ApiDataProvider):
         logger.info(f"Total lines to process \t\t\t{len(route_data['lines'])}")
         for line_nb, line in enumerate(route_data["lines"]):
             logger.info(f"\tprocessing line {line['name']} \t\t\t [{line_nb + 1}/{len(route_data['lines'])}]")
-            r = Route(self.feed_id, line['id'], line['organization']['id'],
-                      self._parse_route_type(line['type']), **{
+            r = Route(self.feed_id, line['id'], line['organization']['id'], self._parse_route_type(line['type']), **{
                     "route_color": line['color'],
                     "route_text_color": "000000",
                     "route_short_name": line['name']
@@ -84,19 +73,21 @@ class RadcomApiDataProvider(ApiDataProvider):
                 r.route_long_name = f"{trip_data['direction_name_tur']} - {trip_data['direction_name_retur']}"
 
                 trips = []
+                shape_id = f"shp{r.agency_id}_{r.route_id}_{direction}"
 
-                shape_points = polyline.decode(trip_data['segment_path'])
+                shape_count = self.dao.session.query(Shape).filter(Shape.shape_id == shape_id).count()
+                shape_points_count = self.dao.session.query(ShapePoint).filter(ShapePoint.shape_id == shape_id).count()
 
-                logger.debug("processing shape")
-                shp = Shape(self.feed_id, f"shp{r.agency_id}_{r.route_id}_{direction}")
-                self._safe_insert(shp)
+                if shape_count == 0 or shape_points_count == 0:
+                    shape_points = polyline.decode(trip_data['segment_path'])
+                    logger.debug("processing shape")
+                    shp = Shape(self.feed_id, f"shp{r.agency_id}_{r.route_id}_{direction}")
+                    self.dao.add(shp)
 
-                dao_shape_pts = []
-                for shp_point_index, shape_point in enumerate(shape_points):
-                    shp_point = ShapePoint(self.feed_id, shp.shape_id, shp_point_index, shape_point[0], shape_point[1],
-                                           -999999)
-                    dao_shape_pts.append(shp_point)
-                self._safe_bulk_insert(dao_shape_pts)
+                    for shp_point_index, shape_point in enumerate(shape_points):
+                        self.dao.add(ShapePoint(self.feed_id, shp.shape_id, shp_point_index, shape_point[0], shape_point[1], -999999))
+                else:
+                    shp = self.dao.session.query(Shape).get([self.feed_id, shape_id])
 
                 logger.debug(f"total stops to process {len(trip_data['stops'])}")
                 for stop_index, stop in enumerate(trip_data['stops']):
@@ -104,26 +95,23 @@ class RadcomApiDataProvider(ApiDataProvider):
                     s = Stop(self.feed_id, stop['id'], stop['name'], stop['lat'], stop['lng'])
                     if s.stop_id not in stops:
                         stops.add(s.stop_id)
-                        self._safe_insert(s)
+                        self.dao.update(s)
 
                     result = self._process_route_stop(r, s, shp, direction, stop_index, trips)
 
-            self._safe_insert(r)
+            self.dao.update(r)
             self.dao.flush()
 
     def _process_route_stop(self, r: Route, s: Stop, shp: Shape, direction, stop_index, trips):
-        # executing request
         stoptime_data = self.line_stops_request(r.route_id, s.stop_id)
 
         index = 0
         if len(stoptime_data[0]['lines']) == 0:
             logger.warning(f"\t\tStop information missing for route {r.route_short_name} and stop {s.stop_name}")
         if len(stoptime_data[0]['lines']) == 0 or stoptime_data[0]['lines'][0]['timetable'] is None:
-            return False
+            return
 
-        stop_times_dao = []
-        timetables = self._convert_timetable(stoptime_data[0]['lines'][0]['timetable'])
-        for schedule_time in timetables:
+        for schedule_time in self._convert_timetable(stoptime_data[0]['lines'][0]['timetable']):
             if len(trips) <= index:
                 t = Trip(self.feed_id, f"{r.agency_id}_{r.route_id}_{direction}_{self.service_id}_{index}",
                          r.route_id,
@@ -133,24 +121,18 @@ class RadcomApiDataProvider(ApiDataProvider):
                             "direction_id": direction,
                             "shape_id": shp.shape_id})
                 trips.append(t)
-
-                self._safe_insert(t)
+                self.dao.add(t)
             else:
                 t = trips[index]
                 if t.stop_times[-1].arrival_time > schedule_time:
                     continue
 
-            st = StopTime(self.feed_id, t.trip_id, s.stop_id, stop_index, schedule_time, schedule_time, 0, **{
-                # "stop_headsign": "00000"
-            })
-            t.stop_times.append(st)
-            stop_times_dao.append(st)
+            if len(t.stop_times):
+                t.stop_times[-1].stop_headsign = s.stop_name;
+
+            t.stop_times.append(StopTime(self.feed_id, t.trip_id, s.stop_id, stop_index, schedule_time, schedule_time, 0))
 
             index += 1
-
-        self._safe_bulk_insert(stop_times_dao)
-        self.dao.flush()
-        return True
 
     @staticmethod
     def _convert_timetable(timetable) -> list:
@@ -174,36 +156,18 @@ class RadcomApiDataProvider(ApiDataProvider):
 
         return switcher.get(type)
 
-    def _safe_bulk_insert(self, bulk):
-        """
-        performs a safe bulk insert, that updates existing items
-        or creates a new record if not found
-        """
-        with self.dao.session.begin_nested():
-            try:
-                for record in bulk:
-                    self._safe_insert(record)
-
-                self.dao.flush()
-
-            except Exception as e:
-                logger.error(f"An exception was meet in bulk insert:{e}")
-                self.dao.session.rollback()
-
-    def _safe_insert(self, record):
-        """
-        performs a safe insert, that updates existing items
-        or creates a new record if not found
-        """
-        self.dao.session.merge(record)
-
     def _clear_trips(self):
         """
         drops all the trips from the databse with the service id
         equal to the one for the current execution (LV or SD)
         """
-        self.dao.session.query(Trip).filter(Trip.service_id == self.service_id).delete(synchronize_session=False)
-        self.dao.session.commit()
+        trips_to_delete = self.dao.session.query(Trip).filter(Trip.service_id == self.service_id).all()
+        for trip in trips_to_delete:
+            self.dao.session.query(StopTime).filter(StopTime.trip_id == trip.trip_id).delete();
+
+        self.dao.session.query(Trip).filter(Trip.service_id == self.service_id).delete();
+        self.dao.flush()
+
         logger.info(f"Successfully droped trips with service id: {self.service_id}")
 
 
@@ -233,10 +197,10 @@ class BucharestApiDataProvider(RadcomApiDataProvider):
                               "agency_fare_url": "http://metrorex.ro/titluri_de_calatorie_p1381-1",
                               "agency_phone": "0213193601"
                           })
-        self._safe_insert(stb)
+        self.dao.update(stb)
         self.agency_ids.add(stb.agency_id)
 
-        self._safe_insert(metrorex)
+        self.dao.update(metrorex)
         self.agency_ids.add(metrorex.agency_id)
 
         self.dao.flush()
@@ -263,9 +227,7 @@ class ConstantaApiDataProvider(RadcomApiDataProvider):
                 "agency_phone": "0241694960"
             })
 
-        self._safe_insert(stb)
+        self.dao.update(stb)
         self.agency_ids.add(stb.agency_id)
 
-        self.dao.flush()
-        self.dao.commit()
         logger.info("Imported %d agencies" % 1)
