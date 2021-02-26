@@ -42,8 +42,7 @@ from exporter.settings import GH_REPO, GH_TOKEN
 from exporter.util.logging import init_logging
 from exporter.util.perf import measure_execution_time
 from exporter.util.spatial import ShapeGenerator
-from exporter.util.storage import init_filesystem
-from exporter.vcs.github import ReleaseGenerator
+from exporter.util.storage import init_filesystem, ReleaseGenerator, SFTPReleaseGenerator
 
 
 @measure_execution_time

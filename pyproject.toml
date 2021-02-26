@@ -20,6 +20,7 @@ six = "^1.15.0"
 pyshp = "^2.1.0"
 pyqtree = "^1.0.0"
 paramiko = "^2.7.2"
+pyinstaller = "^4.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^3.0"

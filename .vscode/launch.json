@@ -46,7 +46,10 @@
                 "--provider=api",
                 "--url=constanta",
                 "--id=constanta"
-            ]
+            ],
+            "env": {
+                
+            }
         }
     ]
 }
