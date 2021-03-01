@@ -1,14 +1,23 @@
 """
 @author: Vlad Vesa <vlad@opentransport.ro>
 """
+import ast
+import os
+import setuptools
 
-from setuptools import setup, find_packages
+with open('README.md', 'r') as fh:
+    long_description = fh.read()
 
-setup(
-    name='gtfs-exporter',
-    version="1.0.0",
+with open(os.path.join('exporter', '__init__.py')) as fh:
+    for line in fh:
+        if line.startswith('__version__'):
+            __version__ = ast.parse(line).body[0].value.s
+
+setuptools.setup(
+    name='exporter',
+    version=__version__,
     description="GTFS processing app",
-    long_description="An open source library for reading, databasing, querying and manipulating GTFS-based transit data",
+    long_description=long_description,
     url='https://github.com/opentransportro/gtfs-exporter',
     author='VLAD VESA',
     author_email='vlad@opentransport.ro',
@@ -25,8 +34,10 @@ setup(
         'Programming Language :: Python :: 3.7',
     ],
     keywords='GTFS transit exporter',
-    packages=find_packages(),
+    packages=setuptools.find_packages(),
     install_requires=[
+        'pyinstaller',
+        'packaging',
         "requests",
         "polyline",
         "PyGithub",
@@ -40,14 +51,12 @@ setup(
         "six",
         "pyshp",
         "pyqtree",
+        'paramiko',
+        'scp'
     ],
-    extras_require={
-        'dev': ['check-manifest'],
-        'test': ['coverage'],
-    },
-    entry_points={
+    entry_points = {
         'console_scripts': [
-            'gtfs-process=exporter.main:main',
+            'exporter = exporter.main:main',
         ],
     },
 )
