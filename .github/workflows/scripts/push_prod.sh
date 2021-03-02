@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-DOCKER_IMAGE="opentransport/gtfs-exporter"
+DOCKER_IMAGE="otrro/gtfs-exporter"
 DOCKER_TAG="prod"
 
 COMMIT_HASH=$(git rev-parse --short "$GITHUB_SHA")

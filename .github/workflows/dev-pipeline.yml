@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8]
         poetry-version: [1.1.4]
         os: [self-hosted]
     runs-on: ${{ matrix.os }}
@@ -41,4 +41,4 @@ jobs:
           DOCKER_USER: ${{ secrets.DOCKER_USER }}
           DOCKER_AUTH: ${{ secrets.DOCKER_AUTH }}
       - name: Integration test
-        run: docker run --rm opentransport/gtfs-exporter  gtfs-process --provider=url --url=https://tursib.ro/trasee/gtfs --id=test
+        run: docker run --rm otrro/gtfs-exporter  gtfs-process --provider=url --url=https://tursib.ro/trasee/gtfs --id=test
