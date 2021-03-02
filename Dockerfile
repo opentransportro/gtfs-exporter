@@ -1,4 +1,4 @@
-FROM opentransport/pfaedle
+FROM vladvesa/pfaedle:v2-latest
 MAINTAINER OpenTransport version: 0.1
 
 ENV WORK=/opt/gtfs-exporter
