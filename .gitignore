@@ -16,3 +16,4 @@ out
 .venv
 exporter/.DS_Store
 !tests/data/gtfs/*.zip
+artifacts
