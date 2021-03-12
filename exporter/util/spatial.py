@@ -6,7 +6,7 @@ from exporter.gtfs.model import Trip, Shape
 from exporter.gtfs.spatial import orthodromic_distance, orthodromic_seg_distance, DistanceCache
 from exporter.gtfs.utils import ContinousPiecewiseLinearFunc
 
-from exporter import __map_path__, __temp_path__
+from exporter import __map_path__, __temp_path__, __output_path__
 from exporter.util.csv import remove_column
 from exporter.util.perf import run_command
 from exporter.util.storage import file_age_in_seconds
@@ -259,11 +259,6 @@ class ShapeGenerator(object):
 
     def generate(self):
         logger.info("searching for pfaedle support for generating shapes")
-        if shutil.which('pfaedle') is None:
-            logger.error("no support for generating shapes, pfaedle not found. Please clone from "
-                         "https://github.com/opentransportro/pfaedle")
-            # need to clone and build repo since this tool is needed for generating shapes
-            return
 
         # download maps
         logger.info("Checking if downloading maps is required.")
@@ -302,13 +297,14 @@ class ShapeGenerator(object):
         self._remove_old_shape_references()
 
         logger.info("generating shapes")
-        run_command(['pfaedle', '-D', '--inplace',
-                     f'-d{self.gtfs_source}',
-                     '-o' + self.gtfs_source,
+        run_command(["docker", "run", "--rm",
+                     "-v", f"{__output_path__}:/data/gtfs/",
+                     "-v", f"{__map_path__}:/data/map/",
+                     "opentransport/pfaedle",
+                     "pfaedle", '-D', '--inplace', '-d', '/data/gtfs', '-o', '/data/gtfs',
                      '--write-trgraph', '--write-graph', '--write-cgraph',
-                     '-mall',
-                     '-x' + map_file, self.gtfs_source],
-                    logger)
+                     '-mall', '-x', '/data/map/map.osm', '/data/gtfs'
+                     ])
 
     def _remove_old_shape_references(self):
         shape_file = os.path.join(self.gtfs_source, "shapes.txt")

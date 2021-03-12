@@ -1,4 +1,4 @@
-FROM opentransport/pfaedle
+FROM vesavlad/pfaedle
 MAINTAINER OpenTransport version: 0.1
 
 ENV WORK=/opt/gtfs-exporter

@@ -399,7 +399,7 @@ class Dao(object):
         @transactional(self.session)
         def _do_load_gtfs():
             with Gtfs(ZipFileSource(filename)).load() as gtfs:
-                _convert_gtfs_model(feed_id, gtfs, self, lenient, disable_normalization, **kwargs)
+                _convert_gtfs_model(feed_id, gtfs, self, lenient, disable_normalization)
 
         _do_load_gtfs()
 

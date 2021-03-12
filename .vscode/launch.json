@@ -8,7 +8,7 @@
             "name": "Timisoara",
             "type": "python",
             "request": "launch",
-            "module": "exporter.main",
+            "module": "exporter.static",
             "args": [
                 "--provider=url",
                 "--url=https://api.opentransport.ro/gtfs/v1/static",
@@ -19,7 +19,7 @@
             "name": "Brasov",
             "type": "python",
             "request": "launch",
-            "module": "exporter.main",
+            "module": "exporter.static",
             "args": [
                 "--provider=api",
                 "--url=brasov",
@@ -30,7 +30,7 @@
             "name": "Bucharest",
             "type": "python",
             "request": "launch",
-            "module": "exporter.main",
+            "module": "exporter.static",
             "args": [
                 "--provider=api",
                 "--url=bucharest",
@@ -41,15 +41,24 @@
             "name": "Constanta",
             "type": "python",
             "request": "launch",
-            "module": "exporter.main",
+            "module": "exporter.static",
             "args": [
                 "--provider=api",
                 "--url=constanta",
                 "--id=constanta"
-            ],
-            "env": {
-                
-            }
+            ]
+        },
+        {
+            "name": "Cluj",
+            "type": "python",
+            "request": "launch",
+            "module": "exporter.static",
+            "args": [
+                "--provider=api",
+                "--url=cluj",
+                "--id=cluj",
+                "--processors=stop_time,route_color"
+            ]
         }
     ]
 }

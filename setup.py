@@ -56,7 +56,7 @@ setuptools.setup(
     ],
     entry_points = {
         'console_scripts': [
-            'exporter = exporter.main:main',
+            'exporter=exporter.static:main',
         ],
     },
 )

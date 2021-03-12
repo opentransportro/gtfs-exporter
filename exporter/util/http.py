@@ -53,7 +53,7 @@ class Request(object):
         return self._url
 
     def __call__(self, *args):
-        # api call rate limiting to 20 requests / 1 second => 1 request / 50 msec
+        # providers call rate limiting to 20 requests / 1 second => 1 request / 50 msec
         # --- average response time observed was ~35 msec
         request_url = self._url.format(*args)
 
